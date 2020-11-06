@@ -60,8 +60,8 @@ def test_resblock(input):
 	print("Runtime: %.4fs" %(time.time() - start_time))
 
 if __name__ == "__main__":
-	input = tf.random.uniform(shape=(1, 8, 112, 112, 3), maxval=256)
+	input = tf.random.uniform(shape=(8, 8, 112, 112, 3), maxval=256)
 	print("Input shape: ", input.shape)
 	
 	output1 = test_bottleneck(input)
-	test_resblock(output1)	
+	test_resblock(output1)
