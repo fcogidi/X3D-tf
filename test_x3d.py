@@ -15,6 +15,6 @@ input = tf.random.uniform(shape=(1, 13, 160, 160, 3), maxval=256)
 
 model = X3D()
 start_time = time.time()
-model.build(input_shape=(input.shape))
-print(model.summary())
+#model.build(input_shape=(input.shape))
+print(model.summary(input.shape[1:]))
 print("Runtime: %.4fs" %(time.time() - start_time))

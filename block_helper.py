@@ -5,7 +5,6 @@ from tensorflow.keras.layers import Conv3D
 from tensorflow.keras.layers import Activation
 from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras.layers import GlobalAveragePooling3D
-from tensorflow.python.ops import data_flow_ops
 
 class Bottleneck(Layer):
     '''
@@ -16,7 +15,7 @@ class Bottleneck(Layer):
                 channels: tuple,
                 stride: int = 1,
                 eps: float = 1e-5,
-                bn_mnt: float = 0.1,
+                bn_mnt: float = 0.9,
                 block_index: int = 0,
                 se_ratio: float = 0.0625,
                 temp_kernel_size: int = 3) -> None:
@@ -52,6 +51,7 @@ class Bottleneck(Layer):
                         strides=(1, stride, stride), # why?
                         padding='same',
                         use_bias=False,
+                        groups=channels[0], # turns out to be necessary to reduce model params
                         data_format='channels_last')
         self.bn_b = BatchNormalization(axis=-1,
                                         momentum=bn_mnt, 
@@ -129,7 +129,7 @@ class ResBlock(Layer):
                 channels: tuple,
                 stride: int = 1,
                 eps: float = 1e-5,
-                bn_mnt: float = 0.1,
+                bn_mnt: float = 0.9,
                 se_ratio: float = 0.0625,
                 temp_kernel_size: int = 3) -> None:
         '''
