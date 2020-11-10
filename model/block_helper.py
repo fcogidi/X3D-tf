@@ -1,3 +1,5 @@
+from yacs.config import CfgNode
+
 from tensorflow import reshape
 from tensorflow.keras.layers import Add
 from tensorflow.keras.layers import Layer
@@ -5,6 +7,7 @@ from tensorflow.keras.layers import Conv3D
 from tensorflow.keras.layers import Activation
 from tensorflow.keras.layers import BatchNormalization
 from tensorflow.keras.layers import GlobalAveragePooling3D
+from tensorflow.python.keras.engine.sequential import Sequential
 
 class Bottleneck(Layer):
     '''
@@ -13,29 +16,31 @@ class Bottleneck(Layer):
     '''
     def __init__(self,
                 channels: tuple,
+                bn_cfg: CfgNode,
                 stride: int = 1,
-                eps: float = 1e-5,
-                bn_mnt: float = 0.9,
                 block_index: int = 0,
                 se_ratio: float = 0.0625,
-                temp_kernel_size: int = 3) -> None:
-        '''Constructs a single X3D bottleneck block.
+                temp_kernel_size: int = 3):
+        '''
+        Constructs a single X3D bottleneck block.
 
         Args:
             channels (tuple): number of channels for each layer in the bottleneck
                 order: (number of channles in first two layers, number of channels in last layer)
-            stride (int): stride in the spatial dimension
-            eps (float): epsilon for batch norm (default: 1e-5)
-            bn_mnt (float): momentum for batch norm (default: 0.1)
+            bn_cfg (CfgNode): holds the parameters for the batch
+            stride (int, optional): stride in the spatial dimension.
+                Defaults to 1
             block_index (int): the index of the current block
-            se_ratio (float): the width multiplier for the squeeze-excitation
-                operation (default: 0.0625)
-            temp_kernel_size (int): number of filters to use in the temporal 
-                dimension for 3x3x3 conv (default: 3)
+            se_ratio (float, optional): the width multiplier for the squeeze-excitation
+                operation. Defaults to 0.0625
+            temp_kernel_size (int, optional): the filter size for the
+                temporal dimension of the 3x3x3 convolutinal layer.
+                Defaults to 3.
         '''
         super(Bottleneck, self).__init__()
-        assert len(channels) == 2, "Please provide two channels for the bottleneck block"
         self.block_index = block_index
+        self._bn_cfg = bn_cfg
+
         self.a = Conv3D(filters=channels[0], 
                         kernel_size=1,
                         strides=(1, 1, 1),
@@ -43,23 +48,23 @@ class Bottleneck(Layer):
                         use_bias=False,
                         data_format='channels_last')
         self.bn_a = BatchNormalization(axis=-1,
-                                        momentum=bn_mnt, 
-                                        epsilon=eps)
+                                    epsilon=self._bn_cfg.EPS,
+                                    momentum=self._bn_cfg.MOMENTUM)
         self.relu1 = Activation('relu')
         self.b = Conv3D(filters=channels[0], 
                         kernel_size=(temp_kernel_size, 3, 3),
-                        strides=(1, stride, stride), # why?
+                        strides=(1, stride, stride), # spatial downsampling
                         padding='same',
                         use_bias=False,
                         groups=channels[0], # turns out to be necessary to reduce model params
                         data_format='channels_last')
         self.bn_b = BatchNormalization(axis=-1,
-                                        momentum=bn_mnt, 
-                                        epsilon=eps)
-        self.relu2 = Activation('relu')
+                                    epsilon=self._bn_cfg.EPS,
+                                    momentum=self._bn_cfg.MOMENTUM)
+        self.swish = Activation('swish')
 
         # Squeeze-and-Excite operation
-        if (self.block_index % 2 == 0):
+        if ((self.block_index + 1) % 2 == 0):
             width = self._round_width(channels[0], se_ratio)
             self.se_pool = AdaptiveAvgPool3D((1, 1, 1)) 
             self.se_fc1 = Conv3D(filters=width,
@@ -79,7 +84,9 @@ class Bottleneck(Layer):
                         padding='same',
                         use_bias=False,
                         data_format='channels_last')
-        self.bn_c = BatchNormalization(axis=-1)
+        self.bn_c = BatchNormalization(axis=-1,
+                                    epsilon=self._bn_cfg.EPS,
+                                    momentum=self._bn_cfg.MOMENTUM)
 
     def call(self, input, training=False):
         out = self.a(input)
@@ -87,12 +94,12 @@ class Bottleneck(Layer):
         out = self.relu1(out)
         out = self.b(out)
         out = self.bn_b(out, training=training)
-        out = self.relu2(out)
-        if (self.block_index % 2 == 0):
+        if ((self.block_index + 1) % 2 == 0):
             se = self.se_pool(out)
             se = self.se_fc1(se)
             se = self.se_fc2(se)
             out = out * se
+        out = self.swish(out)
         out = self.c(out)
         out = self.bn_c(out, training=training)
 
@@ -104,8 +111,10 @@ class Bottleneck(Layer):
         Args:
             width (int): the channel dimensions of the input.
             multiplier (float): the multiplication factor.
-            min_width (int): the minimum width after multiplication.
-            divisor (int): the new width should be dividable by divisor.
+            min_width (int, optional): the minimum width after multiplication.
+                Defaults to 8.
+            divisor (int, optional): the new width should be dividable by divisor.
+                Defaults to 8.
         from: https://github.com/facebookresearch/SlowFast/blob/master/slowfast/models/operators.py
         """
         if not multiplier:
@@ -124,12 +133,11 @@ class ResBlock(Layer):
     '''
     X3D residual stage: a single residual block
     '''
-    _block_index = 1
+    _block_index = 0
     def __init__(self,
                 channels: tuple,
+                bn_cfg: CfgNode,
                 stride: int = 1,
-                eps: float = 1e-5,
-                bn_mnt: float = 0.9,
                 se_ratio: float = 0.0625,
                 temp_kernel_size: int = 3) -> None:
         '''
@@ -137,21 +145,25 @@ class ResBlock(Layer):
 
         Args:
             channels (tuple): (input_channels, inner_channels, output_channels) 
-            stride (int): stride in the spatial dimension
-            eps (float): epsilon for batch norm (default: 1e-5)
-            bn_mnt (float): momentum for batch norm (default: 0.1)
-            se_ratio (float): the width multiplier for the squeeze-excitation
-                operation (default: 0.0625)
-            temp_kernel_size (int): number of filters to use in the temporal 
-                dimension for 3x3x3 conv (default: 3)
+            bn_cfg (CfgNode) containing parameters for the batch
+                normalization layer
+            stride (int, optional): stride in the spatial dimension.
+                Defaults to 1
+            se_ratio (float, optional): the width multiplier for the squeeze-excitation
+                operation. Defaults to 0.0625
+            temp_kernel_size (int, optional): the filter size for the
+                temporal dimension of the 3x3x3 convolutinal layer.
+                Defaults to 3.
         '''
         super(ResBlock, self).__init__(name='ResBlock_%u' %ResBlock._block_index)
-        assert len(channels) == 3, "Please provide three channels for the residual block"
+        ResBlock._block_index += 1
+
         self.in_channels = channels[0]
         self.inner_channels = channels[1]
         self.out_channels = channels[2]
-        ResBlock._block_index += 1
+        self._bn_cfg = bn_cfg
 
+        # handles residual connection after downsampling
         if (self.in_channels != self.out_channels or stride != 1):
             self.residual = Conv3D(filters=self.out_channels,
                                     kernel_size=(1, 1, 1),
@@ -160,15 +172,15 @@ class ResBlock(Layer):
                                     use_bias=False,
                                     data_format='channels_last')
             self.bn_r = BatchNormalization(axis=-1,
-                                            epsilon=eps,
-                                            momentum=bn_mnt)
-        self.bottleneck = Bottleneck(channels[1:],
-                                    stride,
-                                    eps,
-                                    bn_mnt,
-                                    ResBlock._block_index,
-                                    se_ratio,
-                                    temp_kernel_size)
+                                    epsilon=self._bn_cfg.EPS,
+                                    momentum=self._bn_cfg.MOMENTUM)
+        
+        self.bottleneck = Bottleneck(channels=channels[1:],
+                                    stride=stride,
+                                    bn_cfg=self._bn_cfg,
+                                    block_index=ResBlock._block_index,
+                                    se_ratio=se_ratio,
+                                    temp_kernel_size=temp_kernel_size)
         self.add_op = Add()
         self.relu = Activation('relu')
         
@@ -183,6 +195,61 @@ class ResBlock(Layer):
         out = self.relu(out)
 
         return out
+
+class ResStage(Layer):
+    '''
+    Constructs a residual stage of given depth 
+        for the X3D network
+    '''
+    _stage_index = 2 # following the convention in the paper
+    def __init__(self,
+                in_channels: int,
+                inner_channels: int,
+                out_channels: int,
+                depth: int,
+                bn_cfg: CfgNode,
+                se_ratio: float = 0.0625,
+                temp_kernel_size: int = 3):
+        '''
+        Args:
+            in_channels (int): number of channels at the input of
+                a stage
+            inner_channels (int): the number of channels at the bottleneck
+                layers of the stage
+            out_channels (int): the number of channels at the output of the
+                stage
+            depth (int): the depth of the stage or number of times stage
+                is repeated
+            bn_cfg (CfgNode) containing parameters for the batch
+                normalization layer
+            se_ratio (float, optional): the width multiplier for the squeeze-excitation
+                operation. Defaults to 0.0625
+            temp_kernel_size (int, optional): the filter size for the
+                temporal dimension of the 3x3x3 convolutinal layer.
+                Defaults to 3.
+        '''
+        super(ResStage, self).__init__(name='res_stage_%u' %ResStage._stage_index)
+        ResStage._stage_index += 1
+
+        self._bn_cfg = bn_cfg
+        self.stage = Sequential()
+        self._inner_channels = inner_channels
+
+        # the second layer of the first block of each stage 
+        # does spatial downsampling with a stride of 2
+        # the input for subsequent layers is the output
+        # from the preceeding layer
+        for i in range(depth):
+            self.stage.add(ResBlock(bn_cfg=self._bn_cfg,
+                                    se_ratio=se_ratio,
+                                    temp_kernel_size=temp_kernel_size,
+                                    stride=2 if i == 0 else 1,
+                                    channels=(in_channels if i == 0 else out_channels,
+                                            inner_channels,
+                                            out_channels)))
+
+    def call(self, input, training=False):
+        return self.stage(input, training=training)
 
 class AdaptiveAvgPool3D(Layer):
     '''
