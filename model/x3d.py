@@ -42,7 +42,7 @@ class X3D(Model):
             self._multiplier = 1 # increase the width by 2 for the other blocks
         else: # increase the number of channels by a factor of 2
             self._conv1_dim = self._round_width(cfg.NETWORK.C1_CHANNELS, 2)
-            self._multiplier = 2 
+            self._multiplier = 2
 
         # [depth, num_channels] for each residual stage
         self._block_basis = [
@@ -61,9 +61,9 @@ class X3D(Model):
         out_dim = self._conv1_dim
 
         for block in self._block_basis:
-            # the output of the previous block 
+            # the output of the previous block
             # is the input of the current block
-            in_dim = out_dim 
+            in_dim = out_dim
 
             # apply expansion factors
             out_dim = self._round_width(block[1], cfg.NETWORK.WIDTH_FACTOR)
@@ -88,18 +88,18 @@ class X3D(Model):
                                         epsilon=self._bn_cfg.EPS,
                                         momentum=self._bn_cfg.MOMENTUM))
         self.conv5.add(Activation('relu'))
-        self.pool5 = AdaptiveAvgPool3D((1, 1, 1), name='pool_5') 
+        self.pool5 = AdaptiveAvgPool3D((1, 1, 1), name='pool_5')
         self.fc1 = Conv3D(filters=2048,
                         kernel_size=1,
-                        strides=1, 
-                        use_bias=False, 
+                        strides=1,
+                        use_bias=False,
                         activation='relu',
                         name='fc_1')
         self.dropout = Dropout(rate=cfg.NETWORK.DROPOUT_RATE)
         self.fc2 = Dense(units=self.num_classes,
                         activation='softmax',
                         use_bias=True,
-                        name='fc_2') 
+                        name='fc_2')
 
     def call(self, input, training=False):
         out = self.conv1(input)
@@ -128,7 +128,7 @@ class X3D(Model):
             min_width (int, optional): the minimum width after multiplication.
                 Defaults to 8.
             divisor (int, optional): the new width should be dividable by divisor.
-                Defaults to 8.        
+                Defaults to 8.
         """
         if not multiplier:
             return width
@@ -189,26 +189,26 @@ class X3D_Stem(Layer):
         self._temp_paddings = constant([
                                     [0, 0],
                                     [temp_filter_size//2, temp_filter_size//2],
-                                    [0, 0], 
-                                    [0, 0], 
+                                    [0, 0],
+                                    [0, 0],
                                     [0, 0]])
 
         # spatial convolution
-        self.conv_s = Conv3D(filters=out_channels, 
+        self.conv_s = Conv3D(filters=out_channels,
                             kernel_size=(1, 3, 3),
                             strides=(1, 2, 2),
                             use_bias=False,
                             data_format='channels_last')
-        
+
         # temporal convolution
-        self.conv_t = Conv3D(filters=out_channels, 
+        self.conv_t = Conv3D(filters=out_channels,
                             kernel_size=(temp_filter_size, 1, 1),
                             strides=(1, 1, 1),
                             use_bias=False,
                             groups=out_channels,
                             data_format='channels_last')
-                                
-        self.bn = BatchNormalization(axis=-1, 
+
+        self.bn = BatchNormalization(axis=-1,
                                     momentum=self.bn_momentum,
                                     epsilon=self.bn_eps)
         self.relu = Activation('relu')

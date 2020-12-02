@@ -41,7 +41,7 @@ class Bottleneck(Layer):
         self.block_index = block_index
         self._bn_cfg = bn_cfg
 
-        self.a = Conv3D(filters=channels[0], 
+        self.a = Conv3D(filters=channels[0],
                         kernel_size=1,
                         strides=(1, 1, 1),
                         padding='same',
@@ -51,7 +51,7 @@ class Bottleneck(Layer):
                                     epsilon=self._bn_cfg.EPS,
                                     momentum=self._bn_cfg.MOMENTUM)
         self.relu1 = Activation('relu')
-        self.b = Conv3D(filters=channels[0], 
+        self.b = Conv3D(filters=channels[0],
                         kernel_size=(temp_kernel_size, 3, 3),
                         strides=(1, stride, stride), # spatial downsampling
                         padding='same',
@@ -66,19 +66,19 @@ class Bottleneck(Layer):
         # Squeeze-and-Excite operation
         if ((self.block_index + 1) % 2 == 0):
             width = self._round_width(channels[0], se_ratio)
-            self.se_pool = AdaptiveAvgPool3D((1, 1, 1)) 
+            self.se_pool = AdaptiveAvgPool3D((1, 1, 1))
             self.se_fc1 = Conv3D(filters=width,
                                 kernel_size=1,
-                                strides=1, 
-                                use_bias=True, 
+                                strides=1,
+                                use_bias=True,
                                 activation='relu')
             self.se_fc2 = Conv3D(filters=channels[0],
-                                kernel_size=1, 
-                                strides=1, 
-                                use_bias=True, 
+                                kernel_size=1,
+                                strides=1,
+                                use_bias=True,
                                 activation='sigmoid')
 
-        self.c = Conv3D(filters=channels[1], 
+        self.c = Conv3D(filters=channels[1],
                         kernel_size=1,
                         strides=(1, 1, 1),
                         padding='same',
@@ -144,7 +144,7 @@ class ResBlock(Layer):
         Constructs a single X3D residual block.
 
         Args:
-            channels (tuple): (input_channels, inner_channels, output_channels) 
+            channels (tuple): (input_channels, inner_channels, output_channels)
             bn_cfg (CfgNode) containing parameters for the batch
                 normalization layer
             stride (int, optional): stride in the spatial dimension.
@@ -174,7 +174,7 @@ class ResBlock(Layer):
             self.bn_r = BatchNormalization(axis=-1,
                                     epsilon=self._bn_cfg.EPS,
                                     momentum=self._bn_cfg.MOMENTUM)
-        
+
         self.bottleneck = Bottleneck(channels=channels[1:],
                                     stride=stride,
                                     bn_cfg=self._bn_cfg,
@@ -183,7 +183,7 @@ class ResBlock(Layer):
                                     temp_kernel_size=temp_kernel_size)
         self.add_op = Add()
         self.relu = Activation('relu')
-        
+
     def call(self, input, training=False):
         out = self.bottleneck(input)
         if hasattr(self, 'residual'):
@@ -198,7 +198,7 @@ class ResBlock(Layer):
 
 class ResStage(Layer):
     '''
-    Constructs a residual stage of given depth 
+    Constructs a residual stage of given depth
         for the X3D network
     '''
     _stage_index = 2 # following the convention in the paper
@@ -235,7 +235,7 @@ class ResStage(Layer):
         self.stage = Sequential()
         self._inner_channels = inner_channels
 
-        # the second layer of the first block of each stage 
+        # the second layer of the first block of each stage
         # does spatial downsampling with a stride of 2
         # the input for subsequent layers is the output
         # from the preceeding layer
@@ -271,14 +271,14 @@ class AdaptiveAvgPool3D(Layer):
         out = self.avg_pool(input)
         if self.data_format == 'channels_last':
             return reshape(out,
-                            shape=(-1, 
+                            shape=(-1,
                                     self.out_shape[0],
                                     self.out_shape[1],
                                     self.out_shape[2],
                                     out.shape[1]))
         else:
             return reshape(out,
-                            shape=(-1, 
+                            shape=(-1,
                                     out.shape[1],
                                     self.out_shape[0],
                                     self.out_shape[1],
