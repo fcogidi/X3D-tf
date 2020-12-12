@@ -1,8 +1,10 @@
 import math
 from yacs.config import CfgNode
-from block_helper import ResStage
-from block_helper import AdaptiveAvgPool3D
+from model.block_helper import ResStage
+from model.block_helper import AdaptiveAvgPool3D
 
+from tensorflow import float32
+from tensorflow import cast
 from tensorflow import pad
 from tensorflow import constant
 from tensorflow.keras import Model
@@ -214,6 +216,7 @@ class X3D_Stem(Layer):
         self.relu = Activation('relu')
 
     def call(self, input, training=False):
+        input = cast(input, float32)
         out = pad(input, self._spatial_paddings)
         out = self.conv_s(out)
         out = pad(out, self._temp_paddings)
