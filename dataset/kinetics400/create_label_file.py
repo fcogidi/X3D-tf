@@ -37,7 +37,6 @@ def main(_):
     for dirpath, sub_dirs, _ in os.walk(data_dir):
       for sub_dir in sub_dirs:
         # get the path of each sub-directory
-        print(sub_dir)
         index = label_map[sub_dir]
         sub_dirpath = os.path.join(dirpath, sub_dir)
         for path, _, files in os.walk(sub_dirpath):

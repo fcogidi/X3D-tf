@@ -1,32 +1,20 @@
 from decord import VideoReader
-from decord import cpu, gpu
+from decord import bridge
+import tensorflow as tf
 
-vr = VideoReader('dataset/kinetics400/compress/train_256/bowling/_2f3DMpL24o_000004_000014.mp4', ctx=cpu(0))
-# a file like object works as well, for in-memory decoding
-#with open('examples/flipping_a_pancake.mkv', 'rb') as f:
-#  vr = VideoReader(f, ctx=cpu(0))
-print('video frames:', len(vr))
-# 1. the simplest way is to directly access frames
-for i in range(len(vr)):
-    # the video reader will handle seeking and skipping in the most efficient manner
-    frame = vr[i]
-    print(frame.shape)
+def data_gen(label_file='dataset/kinetics400/train.txt'):
+    with open(label_file) as f:
+        for line in f:
+            parts = line.strip().split(' ')
+            link = parts[0]
+            label = int(parts[1])
+            bridge.set_bridge('tensorflow')
+            vr = VideoReader(link, num_threads=8)
+            video = vr.get_batch(range(0, 31, 2))
+            yield (video, label)
 
-# To get multiple frames at once, use get_batch
-# this is the efficient way to obtain a long list of frames
-frames = vr.get_batch([1, 3, 5, 7, 9])
-print(frames.shape)
-# (5, 240, 320, 3)
-# duplicate frame indices will be accepted and handled internally to avoid duplicate decoding
-frames2 = vr.get_batch([1, 2, 3, 2, 3, 4, 3, 4, 5]).asnumpy()
-print(frames2.shape)
-# (9, 240, 320, 3)
+dataset = tf.data.Dataset.from_generator(data_gen,
+                                        (tf.uint8, tf.int32),
+                                        (tf.TensorShape((None, None, None, 3)), tf.TensorShape([])))
 
-# 2. you can do cv2 style reading as well
-# skip 100 frames
-vr.skip_frames(100)
-# seek to start
-vr.seek(0)
-batch = vr.next()
-print('frame shape:', batch.shape)
-print('numpy frames:', batch.asnumpy())
+print(list(dataset.take(1).as_numpy_iterator()))
