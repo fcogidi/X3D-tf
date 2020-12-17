@@ -57,7 +57,7 @@ _C.DATA.TEMP_DURATION = 1
 _C.DATA.NUM_INPUT_CHANNELS = 3
 
 # the spatial resolution of the input
-_C.DATA.SPATIAL_RES = 112
+_C.DATA.SPATIAL_FACTOR = 2.0
 '''TEST:
   ENABLE: True
   DATASET: kinetics
