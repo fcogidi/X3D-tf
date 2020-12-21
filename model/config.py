@@ -56,8 +56,36 @@ _C.DATA.TEMP_DURATION = 1
 # the number of channels in the input
 _C.DATA.NUM_INPUT_CHANNELS = 3
 
+# the minimum and maximum scale for image resize operation
+_C.DATA.TRAIN_JITTER_SCALES = [182, 228]
+
 # the spatial resolution of the input
-_C.DATA.SPATIAL_FACTOR = 2.0
+_C.DATA.TRAIN_CROP_SIZE = 112
+
+# path to .txt file containing path_to_video and label
+# for training set
+_C.DATA.TRAIN_LABEL_PATH = " "
+
+# path to .txt file containing path_to_video and label
+# for test set
+_C.DATA.TEST_LABEL_PATH = " "
+
+_C.DATA.TEST_CROP_SIZE = 160
+
+# The mean value of the video raw pixels across the R G B channels.
+_C.DATA.MEAN = [0.45, 0.45, 0.45]
+
+# The standard deviation of the video raw pixels across the R G B channels.
+_C.DATA.STD = [0.225, 0.225, 0.225]
+
+#
+# configuration for inference
+#
+_C.TEST = CN()
+
+# number of spatial crops
+_C.TEST.NUM_SPATIAL_CROPS = 3
+
 '''TEST:
   ENABLE: True
   DATASET: kinetics

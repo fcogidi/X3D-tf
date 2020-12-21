@@ -1,111 +1,136 @@
 import tensorflow as tf
 import decord
 
-from model.config import get_default_config
+from transforms import TemporalTransforms, SpatialTransforms
+from yacs.config import CfgNode
 
-def decode_video(line):
-  """
-  Given a line from a text file containing the link
-  to a video and the numerical label, process the line
-  and decode the video.
 
-  Args:
-      line (tf.Tensor): a string tensor containing the
-        path to a video file and the label of the video.
+class InputReader:
+  def __init__(self, 
+              cfg: CfgNode,
+              is_training: bool):
+    """__init__()
 
-  Returns:
-      tf.uint8, tf.int32: the decoded video (with all its
-        frames intact), the label of the video
-  """
-  # remove trailing and leading whitespaces
-  line = tf.strings.strip(line)
+    Args:
+        cfg (CfgNode): the model configurations
+        is_training (bool): boolean flag to indicate if
+          reading training dataset
+    """
+    self._cfg = cfg
+    self._is_training = is_training
+    if self._is_training:
+      self._label_path = self._cfg.DATA.TRAIN_LABEL_PATH
+    else:
+      self._label_path = self._cfg.DATA.TEST_LABEL_PATH
+  
+  def decode_video(self, line):
+    """
+    Given a line from a text file containing the link
+    to a video and the numerical label, process the line
+    and decode the video.
 
-  # split the (byte) string by space
-  split = tf.strings.split(line, ' ')
+    Args:
+        line (tf.Tensor): a string tensor containing the
+          path to a video file and the label of the video.
 
-  # convert byte tensor to python string object
-  path = tf.compat.as_str_any(split[0].numpy())
+    Returns:
+        tf.uint8, tf.int32: the decoded video (with all its
+          frames intact), the label of the video
+    """
+    # remove trailing and leading whitespaces
+    line = tf.strings.strip(line)
 
-  # convert label to integer
-  label = tf.strings.to_number(split[1], out_type=tf.int32)
+    # split the (byte) string by space
+    split = tf.strings.split(line, ' ')
 
-  # decode video frames
-  decord.bridge.set_bridge('tensorflow')
-  vr = decord.VideoReader(path)
-  num_frames = len(vr)
-  video = vr.get_batch(range(num_frames))
+    # convert byte tensor to python string object
+    path = tf.compat.as_str_any(split[0].numpy())
 
-  return video, label
+    # convert label to integer
+    label = tf.strings.to_number(split[1], out_type=tf.int32)
 
-@tf.function
-def temporal_sampling(frame_rate, temporal_duration, video, label):
-  """
-  Temporally sample a clip from the given video by selecting
-  a random start frame and looping the video until the number
-  of frames given by :param temporal_duration is achieved at the
-  given frame rate.
+    try:
+      # decode video frames
+      decord.bridge.set_bridge('tensorflow')
+      vr = decord.VideoReader(path)
+      num_frames = len(vr)
+      video = vr.get_batch(range(num_frames))
+    except Exception as e:
+      print(f"Failed to decode video {path} with exception: {e}")
+      video = tf.zeros([16, 112, 112, 3], tf.uint8)
+      label = tf.constant(-1, tf.int32)
 
-  Args:
-      frame_rate (int): temporal stride
-      temporal_duration (int): number of frames
-      video (tf.Tensor): Full video
-      label (tf.Tensor): integer representing class of video
+    return video, label
+  
+  def process_batch(self, videos, label):
+    if self._is_training:
+      videos = tf.squeeze(videos)
+    else:
+      shapes = tf.shape(videos)
+      videos = tf.reshape(videos, shape=[-1, shapes[-4], shapes[-3], shapes[-2], shapes[-1]])
 
-  Returns:
-      tuple (tf.Tensor, tf.Tensor): clip from video, clip label
-  """
-  size = tf.shape(video)[0]
-  indices = tf.range(size)
-  # randomly select start index from uniform distribution
-  start_index = tf.random.uniform([1], 0, size, tf.int32)
+    return videos, label
 
-  # calulate end_index so that the number of frames selected
-  # will be equal to the temporal duration. The formular here
-  # is simply the inverse of one used by tf.strided_slice to
-  # to calculate the size of elements to extract: 
-  # (end-begin)/stride
-  end_index = start_index + (temporal_duration * frame_rate)
-  end_index = tf.cast(end_index, tf.int32)
+  @property
+  def dataset_options(self):
+    """Returns set options for td.data.Dataset API"""
+    options = tf.data.Options()
+    options.experimental_deterministic = not self._is_training
+    options.experimental_optimization.map_vectorization.enabled = True
+    options.experimental_optimization.map_parallelization = True
+    options.experimental_optimization.parallel_batch = True
+    return options
 
-  # loop the indices to enusre that enough frames are available
-  # to fulfil the temporal_duration
-  num_loops = tf.math.ceil(end_index / size)
-  num_loops = tf.cast(num_loops, tf.int32)
-  indices = tf.tile(indices, multiples=num_loops)
+  def __call__(self, batch_size=None, num_views=1):
+    """Loads, transforms and batches data"""
+    temporal_transform = TemporalTransforms(
+        sample_rate=self._cfg.DATA.FRAME_RATE,
+        num_frames=self._cfg.DATA.TEMP_DURATION,
+        is_training=self._is_training,
+        num_views=num_views
+    )
 
-  indices = tf.strided_slice(indices, start_index, end_index, [frame_rate])
-  clip = tf.gather(video, indices, axis=0)
+    spatial_transform = SpatialTransforms(
+        jitter_min=self._cfg.DATA.TRAIN_JITTER_SCALES[0],
+        jitter_max=self._cfg.DATA.TRAIN_JITTER_SCALES[1],
+        crop_size=self._cfg.DATA.TRAIN_CROP_SIZE if self._is_training else self._cfg.DATA.TEST_CROP_SIZE,
+        is_training=self._is_training,
+        num_crops=self._cfg.TEST.NUM_SPATIAL_CROPS,
+        random_hflip=self._is_training
+    )
+
+    dataset = tf.data.TextLineDataset(self._label_path).prefetch(1)
+
+    if self._is_training:
+      dataset = dataset.shuffle(64, seed=None).repeat()
     
-  return clip, label
+    dataset = dataset.with_options(self.dataset_options)
+    
+    dataset = dataset.map(
+        lambda x: tf.py_function(self.decode_video, [x], [tf.uint8, tf.int32]),
+        num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
 
-cfg = get_default_config()
-cfg.merge_from_file('configs/kinetics/X3D_M.yaml')
-cfg.freeze()
+    dataset = dataset.map(
+        lambda *args: temporal_transform(*args),
+        num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
 
-dataset = tf.data.TextLineDataset('dataset/kinetics400/train.txt')
+    dataset = dataset.map(
+        lambda *args: spatial_transform(
+            *args,
+            self._cfg.DATA.MEAN,
+            self._cfg.DATA.STD
+          ),
+        num_parallel_calls=tf.data.experimental.AUTOTUNE
+    )
 
-options = tf.data.Options()
-options.experimental_optimization.map_vectorization.enabled = True
-options.experimental_optimization.map_parallelization = True
-options.experimental_optimization.parallel_batch = True
-dataset = dataset.with_options(options)
+    if batch_size is not None:
+      dataset = dataset.batch(batch_size, drop_remainder=False)
+      dataset = dataset.map(
+          lambda *args: self.process_batch(*args),
+          num_parallel_calls=tf.data.experimental.AUTOTUNE
+      )
+    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
-dataset = dataset.map(
-    lambda x: tf.py_function(decode_video, [x], [tf.uint8, tf.int32]),
-    num_parallel_calls=tf.data.experimental.AUTOTUNE
-)
-
-dataset = dataset.map(
-    lambda *args: temporal_sampling(
-        cfg.DATA.FRAME_RATE,
-        cfg.DATA.TEMP_DURATION,
-        *args),
-    num_parallel_calls=tf.data.experimental.AUTOTUNE
-)
-
-dataset = dataset.prefetch(1)
-
-import time
-start = time.time()
-list(dataset.take(10).as_numpy_iterator())
-print('Runtime:', time.time() - start, 's')
+    return dataset

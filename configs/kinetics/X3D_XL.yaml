@@ -13,4 +13,13 @@ DATA:
   FRAME_RATE: 5
   TEMP_DURATION: 16
   NUM_INPUT_CHANNELS: 3
-  SPATIAL_FACTOR: 2.8284
+  TRAIN_JITTER_SCALES: [356, 446]
+  MEAN: [0.433, 0.404, 0.377] # see https://github.com/kkahatapitiya/X3D-Multigrid/blob/master/train_x3d_kinetics_multigrid.py#L46
+  STD: [0.151, 0.148, 0.157]
+  TRAIN_CROP_SIZE: 312
+  # TEST_CROP_SIZE: 312 # use if TEST.NUM_SPATIAL_CROPS: 1
+  TEST_CROP_SIZE: 356 # use if TEST.NUM_SPATIAL_CROPS: 3
+  TRAIN_LABEL_PATH: "dataset/kinetics400/train.txt"
+  TEST_LABEL_PATH: "dataset/kinetics400/val.txt"
+TEST:
+  NUM_SPATIAL_CROPS: 3
