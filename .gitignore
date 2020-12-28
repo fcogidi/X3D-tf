@@ -1,3 +1,5 @@
 .vscode
 __pycache__
 dataset/kinetics400/compress
+dataset/kinetics400/train.txt
+dataset/kinetics400/val.txt

@@ -253,7 +253,7 @@ class ResStage(Layer):
 
 class AdaptiveAvgPool3D(Layer):
     '''
-    Implementation of AdaptiveAvgPool3D is used in pyTorch impl.
+    Implementation of AdaptiveAvgPool3D as used in pyTorch impl.
     '''
     def __init__(self,
                 spatial_out_shape=(1, 1, 1),

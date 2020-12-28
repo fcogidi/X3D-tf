@@ -6,6 +6,7 @@ from model.block_helper import AdaptiveAvgPool3D
 from tensorflow import float32
 from tensorflow import cast
 from tensorflow import pad
+from tensorflow import reshape
 from tensorflow import constant
 from tensorflow.keras import Model
 from tensorflow.keras import Sequential
@@ -90,7 +91,7 @@ class X3D(Model):
                                         epsilon=self._bn_cfg.EPS,
                                         momentum=self._bn_cfg.MOMENTUM))
         self.conv5.add(Activation('relu'))
-        self.pool5 = AdaptiveAvgPool3D((1, 1, 1), name='pool_5')
+        self.pool5 = AdaptiveAvgPool3D(name='pool_5')
         self.fc1 = Conv3D(filters=2048,
                         kernel_size=1,
                         strides=1,
@@ -112,7 +113,7 @@ class X3D(Model):
         out = self.fc1(out)
         out = self.dropout(out)
         out = self.fc2(out)
-        return out
+        return reshape(out, (-1,out.shape[-1]))
 
     def summary(self, input_shape):
         x = Input(shape=input_shape)

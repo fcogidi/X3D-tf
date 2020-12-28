@@ -58,7 +58,6 @@ class InputReader:
     except Exception as e:
       print(f"Failed to decode video {path} with exception: {e}")
       video = tf.zeros([16, 112, 112, 3], tf.uint8)
-      label = tf.constant(-1, tf.int32)
 
     return video, label
   
