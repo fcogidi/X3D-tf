@@ -1,9 +1,8 @@
-import tensorflow as tf
 import decord
-
-from transforms import TemporalTransforms, SpatialTransforms
+import tensorflow as tf
 from yacs.config import CfgNode
 
+from transforms import TemporalTransforms, SpatialTransforms
 
 class InputReader:
   def __init__(self, 
@@ -67,6 +66,9 @@ class InputReader:
     else:
       shapes = tf.shape(videos)
       videos = tf.reshape(videos, shape=[-1, shapes[-4], shapes[-3], shapes[-2], shapes[-1]])
+    if self._cfg.NETWORK.MIXED_PRECISION:
+      dtype = tf.keras.mixed_precision.experimental.global_policy().compute_dtype
+      videos = tf.cast(videos, dtype)
 
     return videos, label
 
@@ -80,13 +82,13 @@ class InputReader:
     options.experimental_optimization.parallel_batch = True
     return options
 
-  def __call__(self, batch_size=None, num_views=1):
+  def __call__(self, batch_size=None):
     """Loads, transforms and batches data"""
     temporal_transform = TemporalTransforms(
         sample_rate=self._cfg.DATA.FRAME_RATE,
         num_frames=self._cfg.DATA.TEMP_DURATION,
         is_training=self._is_training,
-        num_views=num_views
+        num_views=self._cfg.TEST.NUM_TEMPORAL_VIEWS
     )
 
     spatial_transform = SpatialTransforms(

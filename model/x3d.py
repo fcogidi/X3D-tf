@@ -3,9 +3,9 @@ from yacs.config import CfgNode
 from model.block_helper import ResStage
 from model.block_helper import AdaptiveAvgPool3D
 
-from tensorflow import float32
-from tensorflow import cast
 from tensorflow import pad
+from tensorflow import cast
+from tensorflow import float32
 from tensorflow import reshape
 from tensorflow import constant
 from tensorflow.keras import Model
@@ -100,9 +100,11 @@ class X3D(Model):
                         name='fc_1')
         self.dropout = Dropout(rate=cfg.NETWORK.DROPOUT_RATE)
         self.fc2 = Dense(units=self.num_classes,
-                        activation='softmax',
                         use_bias=True,
                         name='fc_2')
+        # model output needs to be float32 even if mixed
+        # precision policy is set to float16
+        self.softmax = Activation('softmax', dtype='float32')
 
     def call(self, input, training=False):
         out = self.conv1(input)
@@ -113,6 +115,7 @@ class X3D(Model):
         out = self.fc1(out)
         out = self.dropout(out)
         out = self.fc2(out)
+        out = self.softmax(out)
         return reshape(out, (-1,out.shape[-1]))
 
     def summary(self, input_shape):

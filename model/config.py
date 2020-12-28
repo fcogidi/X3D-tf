@@ -31,6 +31,9 @@ _C.NETWORK.NUM_CLASSES = 400
 # dropout rate for the dropout layer before the final fully-connected layer
 _C.NETWORK.DROPOUT_RATE = 0.0
 
+# whether to use mixed precision or not
+_C.NETWORK.MIXED_PRECISION = False
+
 #
 # paramters for batch normalization layers
 #
@@ -79,12 +82,41 @@ _C.DATA.MEAN = [0.45, 0.45, 0.45]
 _C.DATA.STD = [0.225, 0.225, 0.225]
 
 #
+# configuration for training
+#
+_C.TRAIN = CN()
+
+# whether to use multiple gpus or single gpu
+_C.TRAIN.MULTI_GPU = False
+
+# number of examples in the training set
+_C.TRAIN.DATASET_SIZE = 0
+
+# batch size
+_C.TRAIN.BATCH_SIZE = 1
+
+# number of training epochs
+_C.TRAIN.EPOCHS = 1
+
+# directory for logging/saving model
+_C.TRAIN.MODEL_DIR = " "
+
+#
 # configuration for inference
 #
 _C.TEST = CN()
 
 # number of spatial crops
 _C.TEST.NUM_SPATIAL_CROPS = 3
+
+# number of temporal views
+_C.TEST.NUM_TEMPORAL_VIEWS = 1
+
+# number of examples in the training set
+_C.TEST.DATASET_SIZE = 0
+
+# batch size
+_C.TEST.BATCH_SIZE = 1
 
 '''TEST:
   ENABLE: True
