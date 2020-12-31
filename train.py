@@ -1,12 +1,14 @@
 import os
 import math
-from absl import app, flags, logging
+import wandb
 import tensorflow as tf
+from absl import app, flags, logging
+from wandb.keras import WandbCallback
+
 
 from model.config import get_default_config
 from model import x3d
 import dataloader
-import utils
 
 flags.DEFINE_string('config_file_path', None,
                     '(Relative) path to config (.yaml) file.')
@@ -48,12 +50,23 @@ def main(_):
   cfg.merge_from_file(cfg_path)
   cfg.freeze()
 
+  # init wandb
+  wandb.init(
+      job_type='train',
+      project='X3D-tf',
+      group=cfg_path.split('/')[-1],
+      sync_tensorboard=True,
+      config=dict(cfg)
+  )
+
   # DEBUG OPTIONS
 
   # training strategy setup
   avail_gpus = tf.config.list_physical_devices('GPU')
   if len(avail_gpus) > 1 and cfg.TRAIN.MULTI_GPU:
-    train_strategy = tf.distribute.MirroredStrategy()
+    train_strategy = tf.distribute.MirroredStrategy(
+        cross_device_ops=tf.distribute.HierarchicalCopyAllReduce()
+    )
     logging.info('Availalbe GPU devices: %s', avail_gpus)
   elif len(avail_gpus) == 1:
     train_strategy = tf.distribute.OneDeviceStrategy('device:GPU:0')
@@ -106,13 +119,20 @@ def main(_):
             tf.keras.callbacks.LearningRateScheduler(lr_schedule, 1),
             tf.keras.callbacks.TensorBoard(
                 log_dir=cfg.TRAIN.MODEL_DIR,
+                profile_batch=0,
                 histogram_freq=5,
-                update_freq=100#'epoch'
+                update_freq=5000#'epoch'
             ),
             tf.keras.callbacks.ModelCheckpoint(
                 os.path.join(cfg.TRAIN.MODEL_DIR, 'ckpt_{epoch:d}'),
                 verbose=1,
-                save_freq=100,
+                save_freq=5000,
+                save_weights_only=True
+            ),
+            WandbCallback(
+                verbose=1,
+                log_weights=True,
+                log_evaluation=True,
                 save_weights_only=True
             )
         ]

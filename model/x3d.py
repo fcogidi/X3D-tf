@@ -3,11 +3,9 @@ from yacs.config import CfgNode
 from model.block_helper import ResStage
 from model.block_helper import AdaptiveAvgPool3D
 
-from tensorflow import pad
-from tensorflow import cast
-from tensorflow import float32
-from tensorflow import reshape
-from tensorflow import constant
+import tensorflow as tf
+import tensorflow.keras as K
+
 from tensorflow.keras import Model
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Input
@@ -15,6 +13,7 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import Layer
 from tensorflow.keras.layers import Conv3D
 from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Softmax
 from tensorflow.keras.layers import Activation
 from tensorflow.keras.layers import BatchNormalization
 
@@ -34,6 +33,12 @@ class X3D(Model):
         super(X3D, self).__init__()
         self.num_classes = cfg.NETWORK.NUM_CLASSES
         self._bn_cfg = cfg.NETWORK.BN
+
+        # test parameters for handling ensemble predictions
+        #self._num_views = cfg.TEMP.NUM_TEMPORAL_VIEWS
+        #self._num_crops = cfg.TEST.NUM_SPATIAL_CROPS
+        self._num_preds = cfg.TEMP.NUM_TEMPORAL_VIEWS * cfg.TEST.NUM_SPATIAL_CROPS
+        self._test_batch_size = cfg.TEST.BATCH_SIZE
 
         # this block deals with the casw where the width expansion factor is not 1.
         # In the paper, a width factor of 1 results in 24 features from the conv_1
@@ -104,7 +109,7 @@ class X3D(Model):
                         name='fc_2')
         # model output needs to be float32 even if mixed
         # precision policy is set to float16
-        self.softmax = Activation('softmax', dtype='float32')
+        self.softmax = K.layers.Softmax(dtype='float32')
 
     def call(self, input, training=False):
         out = self.conv1(input)
@@ -116,7 +121,12 @@ class X3D(Model):
         out = self.dropout(out)
         out = self.fc2(out)
         out = self.softmax(out)
-        return reshape(out, (-1,out.shape[-1]))
+        shapes = tf.shape(out)
+        if not training:
+            # average predictions
+            out = tf.reshape(out, (-1, self._num_preds, shapes[-1]))
+            out = tf.reduce_mean(out, 1)
+        return tf.reshape(out, (-1, out.shape[-1]))
 
     def summary(self, input_shape):
         x = Input(shape=input_shape)
@@ -183,21 +193,21 @@ class X3D_Stem(Layer):
         self.bn_eps = bn_cfg.EPS
 
         # represents spatial padding of size (0, 1, 1)
-        self._spatial_paddings = constant([
-                                        [0, 0],
-                                        [0, 0],
-                                        [1, 1],
-                                        [1, 1],
-                                        [0, 0]])
+        self._spatial_paddings = tf.constant([
+            [0, 0],
+            [0, 0],
+            [1, 1],
+            [1, 1],
+            [0, 0]])
 
         # represents temporal padding of size
         # (temp_filter_size//2, 0, 0)
-        self._temp_paddings = constant([
-                                    [0, 0],
-                                    [temp_filter_size//2, temp_filter_size//2],
-                                    [0, 0],
-                                    [0, 0],
-                                    [0, 0]])
+        self._temp_paddings = tf.constant([
+            [0, 0],
+            [temp_filter_size//2, temp_filter_size//2],
+            [0, 0],
+            [0, 0],
+            [0, 0]])
 
         # spatial convolution
         self.conv_s = Conv3D(filters=out_channels,
@@ -220,10 +230,10 @@ class X3D_Stem(Layer):
         self.relu = Activation('relu')
 
     def call(self, input, training=False):
-        input = cast(input, float32)
-        out = pad(input, self._spatial_paddings)
+        input = tf.cast(input, tf.float32)
+        out = tf.pad(input, self._spatial_paddings)
         out = self.conv_s(out)
-        out = pad(out, self._temp_paddings)
+        out = tf.pad(out, self._temp_paddings)
         out = self.conv_t(out)
         out = self.bn(out, training=training)
         out = self.relu(out)

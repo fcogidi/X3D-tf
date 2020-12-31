@@ -56,10 +56,12 @@ class InputReader:
       video = vr.get_batch(range(num_frames))
     except Exception as e:
       print(f"Failed to decode video {path} with exception: {e}")
+      # TODO: write path to failed files to disk
       video = tf.zeros([16, 112, 112, 3], tf.uint8)
 
     return video, label
   
+  @tf.function
   def process_batch(self, videos, label):
     if self._is_training:
       videos = tf.squeeze(videos)
@@ -103,7 +105,7 @@ class InputReader:
     dataset = tf.data.TextLineDataset(self._label_path).prefetch(1)
 
     if self._is_training:
-      dataset = dataset.shuffle(64, seed=None).repeat()
+      dataset = dataset.shuffle(256, seed=None).repeat()
     
     dataset = dataset.with_options(self.dataset_options)
     

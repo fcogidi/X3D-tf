@@ -1,3 +1,4 @@
-decord>=0.4.2
+decord==0.4.2
 tensorflow>=2.3.1
-yacs>=0.1.8
+wandb==0.10.12
+yacs==0.1.8

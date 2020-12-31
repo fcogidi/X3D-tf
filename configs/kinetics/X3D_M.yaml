@@ -23,7 +23,7 @@ DATA:
   TEST_LABEL_PATH: "dataset/kinetics400/val.txt"
 TRAIN:
   DATASET_SIZE: 234619
-  BATCH_SIZE: 4
+  BATCH_SIZE: 16
   EPOCHS: 200
   MULTI_GPU: True
   MODEL_DIR: "trial/M"

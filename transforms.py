@@ -65,6 +65,7 @@ class SpatialTransforms:
     frames = tf.stack(frames, 0)
     return tf.cast(frames, clips.dtype)
 
+  @tf.function
   def uniform_crop(self, clips, size, spatial_idx):
     """
     Perform uniform spatial sampling on the images.
@@ -139,6 +140,7 @@ class SpatialTransforms:
                 for i in range(self._num_crops)
       ]
       frames = tf.concat(frames, 0)
+      label = tf.tile(label, self._num_crops)
 
     # normalize pixel values
     frames = normalize(frames, per_channel_mean, per_channel_std)
@@ -156,6 +158,7 @@ class TemporalTransforms:
     self._num_frames = num_frames
     self._num_views = num_views
 
+  @tf.function
   def get_temporal_sample(self, video, num_views=1):
     """
     Temporally sample a clip from the given video by selecting
@@ -205,8 +208,10 @@ class TemporalTransforms:
       clips = self.get_temporal_sample(video)
     else:
       clips = self.get_temporal_sample(video, self._num_views)
+      label = tf.tile(label, self._num_views)
     return clips, label
 
+@tf.function
 def normalize(clips, mean, std, norm_value=255):
   """
   Standardizes an n-dimensional tensor of images by first 
@@ -238,6 +243,7 @@ def normalize(clips, mean, std, norm_value=255):
 
   return tf.reshape(all_frames, tf.shape(clips))
 
+@tf.function
 def denormalize(clips, mean, std, norm_value=255, out_dtype=tf.uint8):
   """
   Reverses the standardization operation for an n-dimensional tensor
