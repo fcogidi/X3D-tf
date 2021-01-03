@@ -65,15 +65,29 @@ class InputReader:
   def process_batch(self, videos, label,  batch_size):
     if self._is_training:
       videos = tf.squeeze(videos)
+      videos.set_shape((
+          batch_size,
+          self._cfg.DATA.TEMP_DURATION,
+          self._cfg.DATA.TRAIN_CROP_SIZE,
+          self._cfg.DATA.TRAIN_CROP_SIZE,
+          self._cfg.DATA.NUM_INPUT_CHANNELS
+      ))
     else:
       shapes = tf.shape(videos)
       videos = tf.reshape(videos, shape=[-1, shapes[-4], shapes[-3], shapes[-2], shapes[-1]])
+      videos.set_shape((
+          batch_size * self._cfg.TEST.NUM_TEMPORAL_VIEWS * self._cfg.TEST.NUM_SPATIAL_CROPS,
+          self._cfg.DATA.TEMP_DURATION,
+          self._cfg.DATA.TEST_CROP_SIZE,
+          self._cfg.DATA.TEST_CROP_SIZE,
+          self._cfg.DATA.NUM_INPUT_CHANNELS
+      ))
     if self._cfg.NETWORK.MIXED_PRECISION:
       dtype = tf.keras.mixed_precision.experimental.global_policy().compute_dtype
       videos = tf.cast(videos, dtype)
       
     videos.set_shape((
-        batch_size,
+        None,
         self._cfg.DATA.TEMP_DURATION,
         self._cfg.DATA.TRAIN_CROP_SIZE,
         self._cfg.DATA.TRAIN_CROP_SIZE,

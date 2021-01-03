@@ -121,8 +121,9 @@ class X3D(Model):
         out = self.dropout(out)
         out = self.fc2(out)
         out = self.softmax(out)
-        shapes = tf.shape(out)
         if not training:
+            shapes = tf.shape(out)
+            print(tf.shape(out))
             # average predictions
             out = tf.reshape(out, (-1, self._num_preds, shapes[-1]))
             out = tf.reduce_mean(out, 1)

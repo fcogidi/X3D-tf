@@ -47,6 +47,7 @@ def main(_):
   cfg.freeze()
 
   # init wandb
+  wandb.tensorboard.patch(root_logdir=cfg.TRAIN.MODEL_DIR)
   wandb.init(
       job_type='train',
       project='X3D-tf',
