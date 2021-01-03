@@ -7,6 +7,8 @@ flags.DEFINE_string('path_to_label_map', None,
                     'Path to .txt file containing labels')
 flags.DEFINE_string('output_path', None,
                     'Name of output file.')
+flags.DEFINE_integer('sample_size', None,
+                    'Number of samples to include from each category.')
 
 flags.mark_flags_as_required(['data_dir', 'path_to_label_map', 'output_path'])
 
@@ -40,9 +42,12 @@ def main(_):
         index = label_map[sub_dir]
         sub_dirpath = os.path.join(dirpath, sub_dir)
         for path, _, files in os.walk(sub_dirpath):
+          count = 0
           for file in files:
-            filepath = os.path.join(path, file)
-            writer.write('{} {}\n'.format(filepath, index))
+            if FLAGS.sample_size is None or count < FLAGS.sample_size:
+              filepath = os.path.join(path, file)
+              writer.write('{} {}\n'.format(filepath, index))
+            count += 1
 
 if __name__ == "__main__":
   app.run(main)
