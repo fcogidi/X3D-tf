@@ -1,9 +1,9 @@
 import os
 import math
-import wandb
+#import wandb
 import tensorflow as tf
 from absl import app, flags, logging
-from wandb.keras import WandbCallback
+#from wandb.keras import WandbCallback
 
 
 from model.config import get_default_config
@@ -28,7 +28,7 @@ def setup_model(model, cfg):
   #model.build(input_shape)
   loss_fn = tf.keras.optimizers.SGD(lr=0.0, momentum=0.9)
   if cfg.NETWORK.MIXED_PRECISION:
-    loss_fn = tf.keras.mixed_precision.LossScaleOptimizer(loss_fn)
+    loss_fn = tf.keras.mixed_precision.experimental.LossScaleOptimizer(loss_fn, 'dynamic')
   model.compile(
       optimizer=loss_fn,
       loss=tf.keras.losses.SparseCategoricalCrossentropy(),
@@ -54,13 +54,19 @@ def main(_):
   cfg.freeze()
 
   # init wandb
-  wandb.init(
+  '''wandb.init(
       job_type='train',
       project='X3D-tf',
       group=cfg_path.split('/')[-1],
       sync_tensorboard=True,
       config=dict(cfg)
-  )
+  )'''
+  '''WandbCallback(
+      verbose=1,
+      log_weights=True,
+      log_evaluation=True,
+      save_weights_only=True
+  )'''
 
   # DEBUG OPTIONS
 
@@ -86,8 +92,8 @@ def main(_):
     # only set to float16 if gpu is available
     if avail_gpus:
       precision = 'mixed_float16'
-  policy = tf.keras.mixed_precision.Policy(precision)
-  tf.keras.mixed_precision.set_global_policy(policy)
+  policy = tf.keras.mixed_precision.experimental.Policy(precision)
+  tf.keras.mixed_precision.experimental.set_policy(policy)
 
   def get_dataset(cfg, is_training):
     return dataloader.InputReader(
@@ -136,12 +142,6 @@ def main(_):
                 save_freq=5000,
                 save_weights_only=True
             ),
-            WandbCallback(
-                verbose=1,
-                log_weights=True,
-                log_evaluation=True,
-                save_weights_only=True
-            )
         ]
 
     )
