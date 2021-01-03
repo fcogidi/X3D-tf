@@ -62,7 +62,7 @@ class InputReader:
     return video, label
   
   @tf.function
-  def process_batch(self, batch_size, videos, label):
+  def process_batch(self, videos, label,  batch_size):
     if self._is_training:
       videos = tf.squeeze(videos)
     else:
@@ -79,7 +79,6 @@ class InputReader:
         self._cfg.DATA.TRAIN_CROP_SIZE,
         self._cfg.DATA.NUM_INPUT_CHANNELS
     ))
-    print(videos.shape)
 
     return videos, label
 
@@ -140,7 +139,7 @@ class InputReader:
     if batch_size is not None:
       dataset = dataset.batch(batch_size, drop_remainder=False)
       dataset = dataset.map(
-          lambda *args: self.process_batch(batch_size, *args),
+          lambda *args: self.process_batch(*args, batch_size),
           num_parallel_calls=tf.data.experimental.AUTOTUNE
       )
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)

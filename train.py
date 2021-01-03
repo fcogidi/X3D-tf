@@ -1,9 +1,9 @@
 import os
 import math
-#import wandb
+import wandb
 import tensorflow as tf
 from absl import app, flags, logging
-#from wandb.keras import WandbCallback
+from wandb.keras import WandbCallback
 
 
 from model.config import get_default_config
@@ -18,14 +18,7 @@ flags.mark_flag_as_required('config_file_path')
 FLAGS = flags.FLAGS
 
 def setup_model(model, cfg):
-  input_shape = (
-      None,
-      cfg.DATA.TEMP_DURATION,
-      cfg.DATA.TRAIN_CROP_SIZE,
-      cfg.DATA.TRAIN_CROP_SIZE,
-      cfg.DATA.NUM_INPUT_CHANNELS
-  )
-  #model.build(input_shape)
+  """Compile model with loss function, model optimizers and metrics."""
   loss_fn = tf.keras.optimizers.SGD(lr=0.0, momentum=0.9)
   if cfg.NETWORK.MIXED_PRECISION:
     loss_fn = tf.keras.mixed_precision.experimental.LossScaleOptimizer(loss_fn, 'dynamic')
@@ -54,19 +47,13 @@ def main(_):
   cfg.freeze()
 
   # init wandb
-  '''wandb.init(
+  wandb.init(
       job_type='train',
       project='X3D-tf',
       group=cfg_path.split('/')[-1],
       sync_tensorboard=True,
       config=dict(cfg)
-  )'''
-  '''WandbCallback(
-      verbose=1,
-      log_weights=True,
-      log_evaluation=True,
-      save_weights_only=True
-  )'''
+  )
 
   # DEBUG OPTIONS
 
@@ -142,6 +129,11 @@ def main(_):
                 save_freq=5000,
                 save_weights_only=True
             ),
+            WandbCallback(
+                verbose=1,
+                save_model=True,
+                log_evaluation=True,
+            )
         ]
 
     )
