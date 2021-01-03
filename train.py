@@ -79,6 +79,7 @@ def main(_):
     # only set to float16 if gpu is available
     if avail_gpus:
       precision = 'mixed_float16'
+      tf.config.optimizer.set_jit(True)
   policy = tf.keras.mixed_precision.experimental.Policy(precision)
   tf.keras.mixed_precision.experimental.set_policy(policy)
 
