@@ -25,9 +25,12 @@ def setup_model(model, cfg):
       cfg.DATA.TRAIN_CROP_SIZE,
       cfg.DATA.NUM_INPUT_CHANNELS
   )
-  model.build(input_shape)
+  #model.build(input_shape)
+  loss_fn = tf.keras.optimizers.SGD(lr=0.0, momentum=0.9)
+  if cfg.NETWORK.MIXED_PRECISION:
+    loss_fn = tf.keras.mixed_precision.LossScaleOptimizer(loss_fn)
   model.compile(
-      optimizer=tf.keras.optimizers.SGD(lr=0.0, momentum=0.9),
+      optimizer=loss_fn,
       loss=tf.keras.losses.SparseCategoricalCrossentropy(),
       metrics=[
           tf.keras.metrics.SparseCategoricalAccuracy(name='acc'),
@@ -63,6 +66,10 @@ def main(_):
 
   # training strategy setup
   avail_gpus = tf.config.list_physical_devices('GPU')
+  
+  for gpu in avail_gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+    
   if len(avail_gpus) > 1 and cfg.TRAIN.MULTI_GPU:
     train_strategy = tf.distribute.MirroredStrategy(
         cross_device_ops=tf.distribute.HierarchicalCopyAllReduce()
@@ -79,8 +86,8 @@ def main(_):
     # only set to float16 if gpu is available
     if avail_gpus:
       precision = 'mixed_float16'
-  policy = tf.keras.mixed_precision.experimental.Policy(precision)
-  tf.keras.mixed_precision.experimental.set_policy(policy)
+  policy = tf.keras.mixed_precision.Policy(precision)
+  tf.keras.mixed_precision.set_global_policy(policy)
 
   def get_dataset(cfg, is_training):
     return dataloader.InputReader(

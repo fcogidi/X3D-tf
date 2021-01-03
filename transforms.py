@@ -140,7 +140,7 @@ class SpatialTransforms:
                 for i in range(self._num_crops)
       ]
       frames = tf.concat(frames, 0)
-      label = tf.tile(label, self._num_crops)
+      label = tf.repeat(label, self._num_crops)
 
     # normalize pixel values
     frames = normalize(frames, per_channel_mean, per_channel_std)
@@ -208,7 +208,7 @@ class TemporalTransforms:
       clips = self.get_temporal_sample(video)
     else:
       clips = self.get_temporal_sample(video, self._num_views)
-      label = tf.tile(label, self._num_views)
+      label = tf.repeat(label, self._num_views)
     return clips, label
 
 @tf.function

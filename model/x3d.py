@@ -37,7 +37,7 @@ class X3D(Model):
         # test parameters for handling ensemble predictions
         #self._num_views = cfg.TEMP.NUM_TEMPORAL_VIEWS
         #self._num_crops = cfg.TEST.NUM_SPATIAL_CROPS
-        self._num_preds = cfg.TEMP.NUM_TEMPORAL_VIEWS * cfg.TEST.NUM_SPATIAL_CROPS
+        self._num_preds = cfg.TEST.NUM_TEMPORAL_VIEWS * cfg.TEST.NUM_SPATIAL_CROPS
         self._test_batch_size = cfg.TEST.BATCH_SIZE
 
         # this block deals with the casw where the width expansion factor is not 1.
@@ -230,7 +230,6 @@ class X3D_Stem(Layer):
         self.relu = Activation('relu')
 
     def call(self, input, training=False):
-        input = tf.cast(input, tf.float32)
         out = tf.pad(input, self._spatial_paddings)
         out = self.conv_s(out)
         out = tf.pad(out, self._temp_paddings)

@@ -1,5 +1,8 @@
 from yacs.config import CfgNode
 
+import tensorflow as tf
+import tensorflow.keras as K
+
 from tensorflow import reshape
 from tensorflow.keras.layers import Add
 from tensorflow.keras.layers import Layer
@@ -50,7 +53,7 @@ class Bottleneck(Layer):
         self.bn_a = BatchNormalization(axis=-1,
                                     epsilon=self._bn_cfg.EPS,
                                     momentum=self._bn_cfg.MOMENTUM)
-        self.relu1 = Activation('relu')
+        self.relu = K.layers.ReLU()
         self.b = Conv3D(filters=channels[0],
                         kernel_size=(temp_kernel_size, 3, 3),
                         strides=(1, stride, stride), # spatial downsampling
@@ -91,7 +94,7 @@ class Bottleneck(Layer):
     def call(self, input, training=False):
         out = self.a(input)
         out = self.bn_a(out, training=training)
-        out = self.relu1(out)
+        out = self.relu(out)
         out = self.b(out)
         out = self.bn_b(out, training=training)
         if ((self.block_index + 1) % 2 == 0):
