@@ -54,10 +54,15 @@ class InputReader:
       vr = decord.VideoReader(path)
       num_frames = len(vr)
       video = vr.get_batch(range(num_frames))
-    except Exception as e:
-      print(f"Failed to decode video {path} with exception: {e}")
+    except Exception:
+      print(f"\nFailed to decode video {path}\n")
       # TODO: write path to failed files to disk
-      video = tf.zeros([self._cfg.DATA.TEMP_DURATION, 112, 112, 3], tf.uint8)
+      video = tf.zeros([
+          self._cfg.DATA.TEMP_DURATION,
+          self._cfg.DATA.TEST_CROP_SIZE,
+          self._cfg.DATA.TEST_CROP_SIZE,
+          self._cfg.DATA.NUM_INPUT_CHANNELS], 
+        tf.uint8)
 
     return video, label
   
@@ -82,10 +87,10 @@ class InputReader:
           self._cfg.DATA.TEST_CROP_SIZE,
           self._cfg.DATA.NUM_INPUT_CHANNELS
       ))
+
     if self._cfg.NETWORK.MIXED_PRECISION:
       dtype = tf.keras.mixed_precision.experimental.global_policy().compute_dtype
       videos = tf.cast(videos, dtype)
-    print(label.shape)
 
     return videos, label
 
@@ -105,8 +110,7 @@ class InputReader:
         sample_rate=self._cfg.DATA.FRAME_RATE,
         num_frames=self._cfg.DATA.TEMP_DURATION,
         is_training=self._is_training,
-        num_views=self._cfg.TEST.NUM_TEMPORAL_VIEWS
-    )
+        num_views=self._cfg.TEST.NUM_TEMPORAL_VIEWS)
 
     spatial_transform = SpatialTransforms(
         jitter_min=self._cfg.DATA.TRAIN_JITTER_SCALES[0],
@@ -114,41 +118,37 @@ class InputReader:
         crop_size=self._cfg.DATA.TRAIN_CROP_SIZE if self._is_training else self._cfg.DATA.TEST_CROP_SIZE,
         is_training=self._is_training,
         num_crops=self._cfg.TEST.NUM_SPATIAL_CROPS,
-        random_hflip=self._is_training
-    )
+        random_hflip=self._is_training)
 
     dataset = tf.data.TextLineDataset(self._label_path).prefetch(1)
 
     if self._is_training:
-      dataset = dataset.shuffle(256, seed=None).repeat()
+      dataset = dataset.shuffle(100).repeat()
+    else:
+      dataset = dataset.cache()
     
     dataset = dataset.with_options(self.dataset_options)
     
     dataset = dataset.map(
         lambda x: tf.py_function(self.decode_video, [x], [tf.uint8, tf.int32]),
-        num_parallel_calls=tf.data.experimental.AUTOTUNE
-    )
+        num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.map(
         lambda *args: temporal_transform(*args),
-        num_parallel_calls=tf.data.experimental.AUTOTUNE
-    )
+        num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.map(
         lambda *args: spatial_transform(
             *args,
             self._cfg.DATA.MEAN,
-            self._cfg.DATA.STD
-          ),
-        num_parallel_calls=tf.data.experimental.AUTOTUNE
-    )
+            self._cfg.DATA.STD),
+        num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     if batch_size is not None:
-      dataset = dataset.batch(batch_size, drop_remainder=False)
+      dataset = dataset.batch(batch_size)
       dataset = dataset.map(
           lambda *args: self.process_batch(*args, batch_size),
-          num_parallel_calls=tf.data.experimental.AUTOTUNE
-      )
+          num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
     return dataset

@@ -101,6 +101,18 @@ _C.TRAIN.EPOCHS = 1
 # directory for logging/saving model
 _C.TRAIN.MODEL_DIR = " "
 
+# loss function
+_C.TRAIN.OPTIMIZER = "SGD"
+
+# momentum for optimizer
+_C.TRAIN.MOMENTUM = 0.9
+
+# base learning rate
+_C.TRAIN.BASE_LR = 1.6
+
+# number of steps to save checkpoints
+_C.TRAIN.SAVE_CHECKPOINTS_EVERY = None
+
 #
 # configuration for inference
 #
@@ -118,22 +130,26 @@ _C.TEST.DATASET_SIZE = 0
 # batch size
 _C.TEST.BATCH_SIZE = 1
 
-'''TEST:
-  ENABLE: True
-  DATASET: kinetics
-  BATCH_SIZE: 64
-  # CHECKPOINT_FILE_PATH: 'x3d_s.pyth' # 73.50% top1 30-view accuracy to download from the model zoo (optional).
-  # NUM_SPATIAL_CROPS: 1
-  NUM_SPATIAL_CROPS: 3
-DATA:
-  NUM_FRAMES: 13
-  SAMPLING_RATE: 6
-  TRAIN_JITTER_SCALES: [182, 228]
-  TRAIN_CROP_SIZE: 160
-  # TEST_CROP_SIZE: 160 # use if TEST.NUM_SPATIAL_CROPS: 1
-  TEST_CROP_SIZE: 182 # use if TEST.NUM_SPATIAL_CROPS: 3
-  INPUT_CHANNEL_NUM: [3]
-'''
+#
+# configurations for weights and biases
+#
+_C.WANDB = CN()
+
+# whether to log to weights and biases
+_C.WANDB.ENABLE = False
+
+# name of the project
+_C.WANDB.PROJECT_NAME = "X3D-tf"
+
+# group name
+_C.WANDB.GROUP_NAME = " "
+
+# Can be "online", "offline" or "disabled". 
+_C.WANDB.MODE = "online"
+
+# whether to sync tensorboard
+_C.WANDB.TENSORBOARD = True
+
 def get_default_config():
     return _C.clone()
 

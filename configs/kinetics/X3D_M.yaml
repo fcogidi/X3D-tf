@@ -17,18 +17,28 @@ DATA:
   MEAN: [0.433, 0.404, 0.377] # see https://github.com/kkahatapitiya/X3D-Multigrid/blob/master/train_x3d_kinetics_multigrid.py#L46
   STD: [0.151, 0.148, 0.157]
   TRAIN_CROP_SIZE: 224
-  #TEST_CROP_SIZE: 224 # use if TEST.NUM_SPATIAL_CROPS: 1
-  TEST_CROP_SIZE: 256 # use if TEST.NUM_SPATIAL_CROPS: 3
-  TRAIN_LABEL_PATH: "dataset/kinetics400/training.txt" #"dataset/kinetics400/train.txt"
-  TEST_LABEL_PATH: "dataset/kinetics400/validation.txt" # "dataset/kinetics400/val.txt"
+  TEST_CROP_SIZE: 224
+  #TEST_CROP_SIZE: 256 # use if TEST.NUM_SPATIAL_CROPS: 3
+  TRAIN_LABEL_PATH: "dataset/kinetics400/train.txt"
+  TEST_LABEL_PATH: "dataset/kinetics400/val.txt"
 TRAIN:
   DATASET_SIZE: 234619
   BATCH_SIZE: 8
   EPOCHS: 200
   MULTI_GPU: True
   MODEL_DIR: "trial/M"
+  OPTIMIZER: "SGD" # supports sgd or adam
+  BASE_LR: 1.6
+  MOMENTUM: 0.9
+  SAVE_CHECKPOINTS_EVERY: 1000
 TEST:
   NUM_SPATIAL_CROPS: 3
   NUM_TEMPORAL_VIEWS: 1
   DATASET_SIZE: 19761
   BATCH_SIZE: 4
+WANDB:
+  ENABLE: True
+  PROJECT_NAME: "X3D-tf"
+  GROUP_NAME: "X3D-M"
+  MODE: "online"
+  TENSORBOARD: True
