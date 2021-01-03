@@ -111,7 +111,7 @@ class X3D(Model):
         # precision policy is set to float16
         self.softmax = K.layers.Softmax(dtype='float32')
 
-    def call(self, input, training=False):
+    def call(self, input, training):
         out = self.conv1(input)
         for stage in self.stages:
             out = stage(out, training=training)
@@ -122,10 +122,8 @@ class X3D(Model):
         out = self.fc2(out)
         out = self.softmax(out)
         if not training:
-            shapes = tf.shape(out)
-            print(tf.shape(out))
             # average predictions
-            out = tf.reshape(out, (-1, self._num_preds, shapes[-1]))
+            out = tf.reshape(out, (-1, self._num_preds, 1, 1, 1, out.shape[-1]))
             out = tf.reduce_mean(out, 1)
         return tf.reshape(out, (-1, out.shape[-1]))
 

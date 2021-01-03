@@ -22,13 +22,13 @@ DATA:
   TRAIN_LABEL_PATH: "dataset/kinetics400/train_sample.txt" # "dataset/kinetics400/train.txt"
   TEST_LABEL_PATH: "dataset/kinetics400/val_sample.txt" # "dataset/kinetics400/val.txt"
 TRAIN:
-  DATASET_SIZE: 400 #234619
-  BATCH_SIZE: 4
+  DATASET_SIZE: 1200 #234619
+  BATCH_SIZE: 32
   EPOCHS: 5
   MULTI_GPU: True
   MODEL_DIR: "trial/XS"
 TEST:
   NUM_SPATIAL_CROPS: 3
-  NUM_TEMPORAL_VIEWS: 1
-  DATASET_SIZE: 400 #19761
-  BATCH_SIZE: 4
+  NUM_TEMPORAL_VIEWS: 10
+  DATASET_SIZE: 1200 #19761
+  BATCH_SIZE: 1

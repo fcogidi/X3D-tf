@@ -51,7 +51,7 @@ def main(_):
   wandb.init(
       job_type='train',
       project='X3D-tf',
-      group=cfg_path.split('/')[-1],
+      group=cfg_path.split('/')[-1].split('.')[0],
       sync_tensorboard=True,
       config=dict(cfg)
   )
@@ -122,19 +122,17 @@ def main(_):
             tf.keras.callbacks.TensorBoard(
                 log_dir=cfg.TRAIN.MODEL_DIR,
                 profile_batch=0,
-                histogram_freq=5,
-                update_freq=5000#'epoch'
+                update_freq='epoch' if cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE < 5000 else 5000
             ),
             tf.keras.callbacks.ModelCheckpoint(
                 os.path.join(cfg.TRAIN.MODEL_DIR, 'ckpt_{epoch:d}'),
                 verbose=1,
-                save_freq=5000,
+                save_freq='epoch' if cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE < 1000 else 1000,
                 save_weights_only=True
             ),
             WandbCallback(
                 verbose=1,
-                save_model=True,
-                log_evaluation=True,
+                save_weights_only=True
             )
         ]
 

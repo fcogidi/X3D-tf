@@ -57,7 +57,7 @@ class InputReader:
     except Exception as e:
       print(f"Failed to decode video {path} with exception: {e}")
       # TODO: write path to failed files to disk
-      video = tf.zeros([16, 112, 112, 3], tf.uint8)
+      video = tf.zeros([self._cfg.DATA.TEMP_DURATION, 112, 112, 3], tf.uint8)
 
     return video, label
   
@@ -85,14 +85,7 @@ class InputReader:
     if self._cfg.NETWORK.MIXED_PRECISION:
       dtype = tf.keras.mixed_precision.experimental.global_policy().compute_dtype
       videos = tf.cast(videos, dtype)
-      
-    videos.set_shape((
-        None,
-        self._cfg.DATA.TEMP_DURATION,
-        self._cfg.DATA.TRAIN_CROP_SIZE,
-        self._cfg.DATA.TRAIN_CROP_SIZE,
-        self._cfg.DATA.NUM_INPUT_CHANNELS
-    ))
+    print(label.shape)
 
     return videos, label
 
