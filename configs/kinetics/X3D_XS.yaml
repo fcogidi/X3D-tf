@@ -19,16 +19,16 @@ DATA:
   TRAIN_CROP_SIZE: 160
   #TEST_CROP_SIZE: 160 # use if TEST.NUM_SPATIAL_CROPS: 1
   TEST_CROP_SIZE: 182 # use if TEST.NUM_SPATIAL_CROPS: 3
-  RAIN_LABEL_PATH: "dataset/kinetics400/train_sample.txt" # "dataset/kinetics400/train.txt"
+  TRAIN_LABEL_PATH: "dataset/kinetics400/train_sample.txt" # "dataset/kinetics400/train.txt"
   TEST_LABEL_PATH: "dataset/kinetics400/val_sample.txt" # "dataset/kinetics400/val.txt"
 TRAIN:
-  DATASET_SIZE: 234619
-  BATCH_SIZE: 2
+  DATASET_SIZE: 400 #234619
+  BATCH_SIZE: 4
   EPOCHS: 200
   MULTI_GPU: True
   MODEL_DIR: "trial/XS"
 TEST:
   NUM_SPATIAL_CROPS: 3
   NUM_TEMPORAL_VIEWS: 1
-  DATASET_SIZE: 19761
+  DATASET_SIZE: 400 #19761
   BATCH_SIZE: 4
