@@ -145,7 +145,7 @@ class InputReader:
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     if batch_size is not None:
-      dataset = dataset.batch(batch_size)
+      dataset = dataset.batch(batch_size, drop_remainder=True)
       dataset = dataset.map(
           lambda *args: self.process_batch(*args, batch_size),
           num_parallel_calls=tf.data.experimental.AUTOTUNE)
