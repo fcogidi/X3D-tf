@@ -87,8 +87,9 @@ def main(_):
     
   if len(avail_gpus) > 1 and cfg.TRAIN.MULTI_GPU:
     devices = []
-    for id in range(cfg.TRAIN.NUM_GPUS):
-      if id < len(avail_gpus):
+    for num in range(cfg.TRAIN.NUM_GPUS):
+      if num < len(avail_gpus):
+        id = int(avail_gpus[num].name.split(':')[-1])
         devices.append(f'/gpu:{id}')
     assert len(devices) > 1
     strategy = tf.distribute.MirroredStrategy(devices=devices)
@@ -144,10 +145,10 @@ def main(_):
       model.load_weights(ckpt_path)
 
     model.fit(
-        strategy.exprimental_distribute_dataset(get_dataset(cfg, True)),
+        strategy.experimental_distribute_dataset(get_dataset(cfg, True)),
         epochs=cfg.TRAIN.EPOCHS,
         steps_per_epoch=cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE,
-        validation_data=strategy.exprimental_distribute_dataset(get_dataset(cfg, False)),
+        validation_data=strategy.experimental_distribute_dataset(get_dataset(cfg, False)),
         validation_steps=cfg.TEST.DATASET_SIZE/cfg.TEST.BATCH_SIZE,
         validation_freq=1,
         verbose=1,
