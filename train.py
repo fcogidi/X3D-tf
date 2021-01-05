@@ -147,13 +147,13 @@ def main(_):
             tf.keras.callbacks.TensorBoard(
                 log_dir=cfg.TRAIN.MODEL_DIR,
                 profile_batch=FLAGS.debug,
-                update_freq='epoch' or cfg.TRAIN.SAVE_CHECKPOINTS_EVERY
+                update_freq=cfg.TRAIN.SAVE_CHECKPOINTS_EVERY or 'epoch'
             ),
             tf.keras.callbacks.ModelCheckpoint(
                 os.path.join(cfg.TRAIN.MODEL_DIR, 'ckpt_{epoch:d}'),
                 verbose=1,
                 save_weights_only=True,
-                save_freq='epoch' or cfg.TRAIN.SAVE_CHECKPOINTS_EVERY,
+                save_freq=cfg.TRAIN.SAVE_CHECKPOINTS_EVERY or 'epoch',
             ),
             WandbCallback(
                 verbose=1,

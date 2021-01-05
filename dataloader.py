@@ -123,12 +123,10 @@ class InputReader:
     dataset = tf.data.TextLineDataset(self._label_path).prefetch(1)
 
     if self._is_training:
-      dataset = dataset.shuffle(100).repeat()
-    else:
-      dataset = dataset.cache()
-    
+      dataset = dataset.shuffle(128)
+
     dataset = dataset.with_options(self.dataset_options)
-    
+
     dataset = dataset.map(
         lambda x: tf.py_function(self.decode_video, [x], [tf.uint8, tf.int32]),
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -150,5 +148,6 @@ class InputReader:
           lambda *args: self.process_batch(*args, batch_size),
           num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-
+    if self._is_training:
+      dataset = dataset.repeat()
     return dataset
