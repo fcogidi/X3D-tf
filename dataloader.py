@@ -104,7 +104,7 @@ class InputReader:
     options.experimental_optimization.parallel_batch = True
     return options
 
-  def __call__(self, batch_size=None):
+  def __call__(self, input_ctx=None, batch_size=None):
     """Loads, transforms and batches data"""
     temporal_transform = TemporalTransforms(
         sample_rate=self._cfg.DATA.FRAME_RATE,
@@ -122,6 +122,9 @@ class InputReader:
 
     dataset = tf.data.TextLineDataset(self._label_path).prefetch(1)
 
+    if input_ctx:
+      dataset = dataset.shard(input_ctx.num_input_pipelines)
+      
     if self._is_training:
       dataset = dataset.shuffle(128)
 

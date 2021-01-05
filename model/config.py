@@ -107,6 +107,12 @@ _C.TRAIN.OPTIMIZER = "SGD"
 # momentum for optimizer
 _C.TRAIN.MOMENTUM = 0.9
 
+# weight decay factor
+_C.TRAIN.WEIGHT_DECAY = 0.00005
+
+# number of gpus to use
+_C.TRAIN.NUM_GPUS = 1
+
 # base learning rate
 _C.TRAIN.BASE_LR = 0.1
 

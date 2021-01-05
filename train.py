@@ -2,6 +2,7 @@ import os
 import math
 import wandb
 import tensorflow as tf
+import tensorflow_addons as tfa
 from absl import app, flags, logging
 from wandb.keras import WandbCallback
 
@@ -23,20 +24,23 @@ def setup_model(model, cfg):
   """Compile model with loss function, model optimizers and metrics."""
   opt_str = cfg.TRAIN.OPTIMIZER.lower()
   if opt_str == 'sgd':
-    loss_fn = tf.keras.optimizers.SGD(
-        learning_rate=0.0,
+    opt = tfa.optimizers.SGDW(
+        learning_rate=cfg.TRAIN.WARMUP_LR,
+        weight_decay=cfg.TRAIN.WEIGHT_DECAY,
         momentum=cfg.TRAIN.MOMENTUM)
   elif opt_str == 'adam':
-    loss_fn = tf.keras.optimizers.Adam(learning_rate=0.0)
+    opt = tfa.optimizers.AdamW(
+        learning_rate=cfg.TRAIN.WARMUP_LR,
+        weight_decay=cfg.TRAIN.WEIGHT_DECAY)
   else:
     raise NotImplementedError
 
   if cfg.NETWORK.MIXED_PRECISION:
-    loss_fn = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
-        loss_fn, 'dynamic')
+    opt = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
+        opt, 'dynamic')
   
   model.compile(
-      optimizer=loss_fn,
+      optimizer=opt,
       loss=tf.keras.losses.SparseCategoricalCrossentropy(),
       metrics=[
           tf.keras.metrics.SparseCategoricalAccuracy(name='acc'),
@@ -81,12 +85,20 @@ def main(_):
     tf.config.experimental.set_memory_growth(gpu, True)
     
   if len(avail_gpus) > 1 and cfg.TRAIN.MULTI_GPU:
-    train_strategy = tf.distribute.MirroredStrategy()
+    devices = []
+    for id in range(cfg.TRAIN.NUM_GPUS):
+      if id < len(avail_gpus):
+        devices.append(avail_gpus[id])
+    assert len(devices) > 1
+    strategy = tf.distribute.MirroredStrategy(devices=devices)
   elif len(avail_gpus) == 1:
-    train_strategy = tf.distribute.OneDeviceStrategy('device:GPU:0')
+    strategy = tf.distribute.OneDeviceStrategy('device:GPU:0')
   else:
     logging.warn('Using CPU')
-    train_strategy = tf.distribute.OneDeviceStrategy('device:CPU:0')
+    strategy = tf.distribute.OneDeviceStrategy('device:CPU:0')
+
+  input_ctx = tf.distribute.InputContext(
+      num_replicas_in_sync=strategy.num_replicas_in_sync)
 
   # mixed precision
   precision = 'float32'
@@ -98,12 +110,12 @@ def main(_):
   policy = tf.keras.mixed_precision.experimental.Policy(precision)
   tf.keras.mixed_precision.experimental.set_policy(policy)
 
-  def get_dataset(cfg, is_training):
+  def get_dataset(cfg, is_training, input_ctx=None):
     """Returns a tf.data dataset"""
     return dataloader.InputReader(
         cfg,
         is_training
-    )(batch_size=cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
+    )(input_ctx, batch_size=cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
   
   # learning rate schedule
   @tf.function
@@ -119,9 +131,10 @@ def main(_):
 
       return lr
     else:
-      return cfg.TRAIN.WARMUP_LR + ((cfg.TRAIN.BASE_LR - cfg.TRAIN.WARMUP_LR) / cfg.TRAIN.WARMUP_EPOCHS)
+      return cfg.TRAIN.WARMUP_LR + (
+          (cfg.TRAIN.BASE_LR - cfg.TRAIN.WARMUP_LR) / cfg.TRAIN.WARMUP_EPOCHS)
 
-  with train_strategy.scope():
+  with strategy.scope():
     model = x3d.X3D(cfg)
     model = setup_model(model, cfg)
 
@@ -133,10 +146,12 @@ def main(_):
       model.load_weights(ckpt_path)
 
     model.fit(
-        get_dataset(cfg, True),
+        strategy.experimental_distribute_datasets_from_function(
+            get_dataset(cfg, input_ctx, True)),
         epochs=cfg.TRAIN.EPOCHS,
         steps_per_epoch=cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE,
-        validation_data=get_dataset(cfg, False),
+        validation_data=strategy.experimental_distribute_datasets_from_function(
+            get_dataset(cfg, input_ctx, False)),
         validation_steps=cfg.TEST.DATASET_SIZE/cfg.TEST.BATCH_SIZE,
         validation_freq=1,
         verbose=1,
