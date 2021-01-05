@@ -109,19 +109,20 @@ def main(_):
     )(batch_size=cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
   
   # learning rate schedule
-  base_lr = cfg.TRAIN.BASE_LR
-
   @tf.function
   def lr_schedule(epoch, lr):
     """
     Implements the learning rate schedule used in
       https://arxiv.org/abs/2004.04730      
     """
-    cosine = tf.math.cos(
-        tf.constant(math.pi) * (epoch/cfg.TRAIN.EPOCHS))
-    lr = base_lr * (0.5 * cosine + 1)
+    if epoch > cfg.TRAIN.WARMUP_EPOCH:
+      cosine = tf.math.cos(
+          tf.constant(math.pi) * (epoch/cfg.TRAIN.EPOCHS))
+      lr = cfg.TRAIN.BASE_LR * (0.5 * cosine + 1)
 
-    return lr
+      return lr
+    else:
+      return cfg.TRAIN.WARMUP_LR
 
   with train_strategy.scope():
     model = x3d.X3D(cfg)

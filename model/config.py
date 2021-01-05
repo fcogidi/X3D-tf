@@ -108,7 +108,13 @@ _C.TRAIN.OPTIMIZER = "SGD"
 _C.TRAIN.MOMENTUM = 0.9
 
 # base learning rate
-_C.TRAIN.BASE_LR = 1.6
+_C.TRAIN.BASE_LR = 0.1
+
+# number of training epochs to warm up
+_C.TRAIN.WARMUP_EPOCHS = 1
+
+# initial learning rate during warmup
+_C.TRAIN.WARMUP_LR = 0.01
 
 # number of steps to save checkpoints
 _C.TRAIN.SAVE_CHECKPOINTS_EVERY = None
