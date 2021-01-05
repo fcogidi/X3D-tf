@@ -81,10 +81,7 @@ def main(_):
     tf.config.experimental.set_memory_growth(gpu, True)
     
   if len(avail_gpus) > 1 and cfg.TRAIN.MULTI_GPU:
-    train_strategy = tf.distribute.MirroredStrategy(
-        cross_device_ops=tf.distribute.HierarchicalCopyAllReduce()
-    )
-    logging.info('Availalbe GPU devices: %s', avail_gpus)
+    train_strategy = tf.distribute.MirroredStrategy()
   elif len(avail_gpus) == 1:
     train_strategy = tf.distribute.OneDeviceStrategy('device:GPU:0')
   else:
@@ -122,7 +119,7 @@ def main(_):
 
       return lr
     else:
-      return cfg.TRAIN.WARMUP_LR
+      return cfg.TRAIN.WARMUP_LR + ((cfg.TRAIN.BASE_LR - cfg.TRAIN.WARMUP_LR) / cfg.TRAIN.WARMUP_EPOCHS)
 
   with train_strategy.scope():
     model = x3d.X3D(cfg)
