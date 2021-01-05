@@ -4,7 +4,7 @@ import tensorflow.keras as K
 
 from model.utils import round_width
 
-class Bottleneck(K.Layer):
+class Bottleneck(K.layers.Layer):
   '''
   X3D Bottleneck block: 1x1x1, Tx3x3, 1x1x1 with squeeze-excitation
       added at every 2 stages.
@@ -108,7 +108,7 @@ class Bottleneck(K.Layer):
 
     return out
 
-class ResBlock(K.Layer):
+class ResBlock(K.layers.Layer):
   '''
   X3D residual stage: a single residual block
   '''
@@ -178,7 +178,7 @@ class ResBlock(K.Layer):
 
     return out
 
-class ResStage(K.Layer):
+class ResStage(K.layers.Layer):
   '''
   Constructs a residual stage of given depth
       for the X3D network
@@ -236,7 +236,7 @@ class ResStage(K.Layer):
   def call(self, input, training=False):
     return self.stage(input, training=training)
 
-class AdaptiveAvgPool3D(K.Layer):
+class AdaptiveAvgPool3D(K.layers.Layer):
   '''
   Implementation of AdaptiveAvgPool3D as used in pyTorch impl.
   '''

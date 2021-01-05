@@ -125,7 +125,7 @@ class X3D(K.Model):
       model = K.Model(inputs=x, outputs=self.call(x), name='X3D')
       return model.summary()
 
-class X3D_Stem(K.Layer):
+class X3D_Stem(K.layers.Layer):
   '''
   X3D_Stem: the first layer of the X3D network, connecting
   the data layer and the residual stages. Applies channel-wise
