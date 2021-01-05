@@ -108,12 +108,12 @@ def main(_):
   policy = tf.keras.mixed_precision.experimental.Policy(precision)
   tf.keras.mixed_precision.experimental.set_policy(policy)
 
-  def get_dataset(input_ctx, cfg, is_training):
+  def get_dataset(cfg, is_training):
     """Returns a tf.data dataset"""
     return dataloader.InputReader(
         cfg,
         is_training
-    )(input_ctx, cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
+    )(cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
   
   # learning rate schedule
   @tf.function
@@ -144,14 +144,10 @@ def main(_):
       model.load_weights(ckpt_path)
 
     model.fit(
-        strategy.experimental_distribute_datasets_from_function(
-            functools.partial(
-              get_dataset(cfg=cfg, is_training=True))),
+        strategy.exprimental_distribute_dataset(get_dataset(cfg, True)),
         epochs=cfg.TRAIN.EPOCHS,
         steps_per_epoch=cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE,
-        validation_data=strategy.experimental_distribute_datasets_from_function(
-            functools.partial(
-              get_dataset(cfg=cfg, is_training=False))),
+        validation_data=strategy.exprimental_distribute_dataset(get_dataset(cfg, False)),
         validation_steps=cfg.TEST.DATASET_SIZE/cfg.TEST.BATCH_SIZE,
         validation_freq=1,
         verbose=1,
