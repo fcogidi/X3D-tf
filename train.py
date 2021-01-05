@@ -115,7 +115,7 @@ def main(_):
     Implements the learning rate schedule used in
       https://arxiv.org/abs/2004.04730      
     """
-    if epoch > cfg.TRAIN.WARMUP_EPOCH:
+    if epoch > cfg.TRAIN.WARMUP_EPOCHS:
       cosine = tf.math.cos(
           tf.constant(math.pi) * (epoch/cfg.TRAIN.EPOCHS))
       lr = cfg.TRAIN.BASE_LR * (0.5 * cosine + 1)
