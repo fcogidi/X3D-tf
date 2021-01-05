@@ -123,7 +123,9 @@ class InputReader:
     dataset = tf.data.TextLineDataset(self._label_path).prefetch(1)
 
     if input_ctx:
-      dataset = dataset.shard(input_ctx.num_input_pipelines)
+      dataset = dataset.shard(
+        input_ctx.num_input_pipelines,
+        input_ctx.input_pipeline_id)
       
     if self._is_training:
       dataset = dataset.shuffle(128)

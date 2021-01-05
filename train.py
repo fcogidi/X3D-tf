@@ -1,6 +1,7 @@
 import os
 import math
 import wandb
+import functools
 import tensorflow as tf
 import tensorflow_addons as tfa
 from absl import app, flags, logging
@@ -88,7 +89,7 @@ def main(_):
     devices = []
     for id in range(cfg.TRAIN.NUM_GPUS):
       if id < len(avail_gpus):
-        devices.append(avail_gpus[id])
+        devices.append(f'/gpu:{id}')
     assert len(devices) > 1
     strategy = tf.distribute.MirroredStrategy(devices=devices)
   elif len(avail_gpus) == 1:
@@ -96,9 +97,6 @@ def main(_):
   else:
     logging.warn('Using CPU')
     strategy = tf.distribute.OneDeviceStrategy('device:CPU:0')
-
-  input_ctx = tf.distribute.InputContext(
-      num_replicas_in_sync=strategy.num_replicas_in_sync)
 
   # mixed precision
   precision = 'float32'
@@ -110,12 +108,12 @@ def main(_):
   policy = tf.keras.mixed_precision.experimental.Policy(precision)
   tf.keras.mixed_precision.experimental.set_policy(policy)
 
-  def get_dataset(cfg, is_training, input_ctx=None):
+  def get_dataset(input_ctx, cfg, is_training):
     """Returns a tf.data dataset"""
     return dataloader.InputReader(
         cfg,
         is_training
-    )(input_ctx, batch_size=cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
+    )(input_ctx, cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
   
   # learning rate schedule
   @tf.function
@@ -147,11 +145,13 @@ def main(_):
 
     model.fit(
         strategy.experimental_distribute_datasets_from_function(
-            get_dataset(cfg, input_ctx, True)),
+            functools.partial(
+              get_dataset(cfg=cfg, is_training=True))),
         epochs=cfg.TRAIN.EPOCHS,
         steps_per_epoch=cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE,
         validation_data=strategy.experimental_distribute_datasets_from_function(
-            get_dataset(cfg, input_ctx, False)),
+            functools.partial(
+              get_dataset(cfg=cfg, is_training=False))),
         validation_steps=cfg.TEST.DATASET_SIZE/cfg.TEST.BATCH_SIZE,
         validation_freq=1,
         verbose=1,
