@@ -202,7 +202,7 @@ class SpatialTransforms:
               self._crop_size,
               i%3 if self._num_crops > 1 else 1) # LeftCenterRight vs Center crop
           for i in range(self._num_crops)]
-      frames = tf.concat(frames, 0)
+      frames = tf.convert_to_tensor(frames)
 
     # normalize pixel values
     frames = normalize(frames, per_channel_mean, per_channel_std)

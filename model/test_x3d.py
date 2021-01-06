@@ -1,7 +1,7 @@
 import time
 import tensorflow as tf
 
-from x3d import X3D
+from model.x3d import X3D
 from config import get_default_config
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -14,10 +14,10 @@ if gpus:
       print(e)
 
 cfg = get_default_config()
-cfg.merge_from_file('configs/kinetics/X3D_M.yaml')
+cfg.merge_from_file('configs/kinetics/X3D_S.yaml')
 cfg.freeze()
 
-input = tf.random.uniform(shape=(1, cfg.DATA.TEMP_DURATION, cfg.DATA.SPATIAL_RES, cfg.DATA.SPATIAL_RES, cfg.DATA.NUM_INPUT_CHANNELS), maxval=256)
+input = tf.random.uniform(shape=(1, cfg.DATA.TEMP_DURATION, cfg.DATA.TRAIN_CROP_SIZE, cfg.DATA.TRAIN_CROP_SIZE, cfg.DATA.NUM_INPUT_CHANNELS), maxval=256)
 model = X3D(cfg)
 start_time = time.time()
 summary = model.summary(input.shape[1:])

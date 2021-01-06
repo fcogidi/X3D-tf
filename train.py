@@ -145,18 +145,18 @@ def main(_):
       model.load_weights(ckpt_path)
 
     model.fit(
-        strategy.experimental_distribute_dataset(get_dataset(cfg, True)),
+        get_dataset(cfg, True),
         epochs=cfg.TRAIN.EPOCHS,
         steps_per_epoch=cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE,
-        validation_data=strategy.experimental_distribute_dataset(get_dataset(cfg, False)),
+        validation_data=get_dataset(cfg, False),
         validation_steps=cfg.TEST.DATASET_SIZE/cfg.TEST.BATCH_SIZE,
-        validation_freq=1,
         verbose=1,
         callbacks=[
             tf.keras.callbacks.LearningRateScheduler(lr_schedule, 1),
             tf.keras.callbacks.TensorBoard(
                 log_dir=cfg.TRAIN.MODEL_DIR,
                 profile_batch=FLAGS.debug,
+                write_images=True,
                 update_freq=cfg.TRAIN.SAVE_CHECKPOINTS_EVERY or 'epoch'
             ),
             tf.keras.callbacks.ModelCheckpoint(

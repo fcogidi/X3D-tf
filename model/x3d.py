@@ -22,9 +22,8 @@ class X3D(K.Model):
     self.num_classes = cfg.NETWORK.NUM_CLASSES
     self._bn_cfg = cfg.NETWORK.BN
 
-    # test parameters for handling ensemble predictions
+    # for handling ensemble predictions
     self._num_preds = cfg.TEST.NUM_TEMPORAL_VIEWS * cfg.TEST.NUM_SPATIAL_CROPS
-    self._test_batch_size = cfg.TEST.BATCH_SIZE
 
     # this block deals with the casw where the width expansion factor is not 1.
     # In the paper, a width factor of 1 results in 24 features from the conv_1
@@ -32,7 +31,7 @@ class X3D(K.Model):
     # applied to a channel size of 12
     if cfg.NETWORK.SCALE_RES2: # apply width_factor directly to channel dimension
       self._conv1_dim = utils.round_width(cfg.NETWORK.C1_CHANNELS,
-                                          cfg.NETWORK.WIDTH_FACTOR)
+          cfg.NETWORK.WIDTH_FACTOR)
       self._multiplier = 1 # increase the width by 2 for the other blocks
     else: # increase the number of channels by a factor of 2
       self._conv1_dim = utils.round_width(cfg.NETWORK.C1_CHANNELS, 2)
@@ -104,10 +103,10 @@ class X3D(K.Model):
     # precision policy is set to float16
     self.softmax = K.layers.Softmax(dtype='float32')
 
-  def call(self, input, training):
+  def call(self, input, training=False):
     out = self.conv1(input)
     for stage in self.stages:
-        out = stage(out, training=training)
+      out = stage(out, training=training)
     out = self.conv5(out, training=training)
     out = self.pool5(out)
     out = self.fc1(out)
@@ -115,9 +114,9 @@ class X3D(K.Model):
     out = self.fc2(out)
     out = self.softmax(out)
     if not training:
-        # average predictions
-        out = tf.reshape(out, (-1, self._num_preds, 1, 1, 1, out.shape[-1]))
-        out = tf.reduce_mean(out, 1)
+      # average predictions
+      out = tf.reshape(out, (-1, self._num_preds, 1, 1, 1, out.shape[-1]))
+      out = tf.reduce_mean(out, 1)
     return tf.reshape(out, (-1, out.shape[-1]))
 
   def summary(self, input_shape):
