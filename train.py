@@ -92,7 +92,7 @@ def main(_):
         id = int(avail_gpus[num].name.split(':')[-1])
         devices.append(f'/gpu:{id}')
     assert len(devices) > 1
-    strategy = tf.distribute.MirroredStrategy(devices=devices)
+    strategy = tf.distribute.MirroredStrategy(devices)
   elif len(avail_gpus) == 1:
     strategy = tf.distribute.OneDeviceStrategy('device:GPU:0')
   else:
@@ -117,7 +117,6 @@ def main(_):
     )(cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
   
   # learning rate schedule
-  @tf.function
   def lr_schedule(epoch, lr):
     """
     Implements the learning rate schedule used in

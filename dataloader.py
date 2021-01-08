@@ -58,7 +58,7 @@ class InputReader:
       print(f"\nFailed to decode video {path}\n")
       # TODO: write path to failed files to disk
       video = tf.zeros([
-          self._cfg.DATA.TEMP_DURATION,
+          self._cfg.DATA.TEMP_DURATION * 10,
           self._cfg.DATA.TEST_CROP_SIZE,
           self._cfg.DATA.TEST_CROP_SIZE,
           self._cfg.DATA.NUM_INPUT_CHANNELS], 
@@ -91,7 +91,6 @@ class InputReader:
     if self._cfg.NETWORK.MIXED_PRECISION:
       dtype = tf.keras.mixed_precision.experimental.global_policy().compute_dtype
       videos = tf.cast(videos, dtype)
-
     return videos, label
 
   @property
