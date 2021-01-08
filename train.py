@@ -117,7 +117,6 @@ def main(_):
     )(cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
   
   # learning rate schedule
-  @tf.function
   def lr_schedule(epoch, lr):
     """
     Implements the learning rate schedule used in
@@ -162,12 +161,12 @@ def main(_):
             tf.keras.callbacks.ModelCheckpoint(
                 os.path.join(cfg.TRAIN.MODEL_DIR, 'ckpt_{epoch:d}'),
                 verbose=1,
-                save_weights_only=True,
+                save_best_only=True,
                 save_freq=cfg.TRAIN.SAVE_CHECKPOINTS_EVERY or 'epoch',
             ),
             WandbCallback(
                 verbose=1,
-                save_weights_only=True
+                save_best_only=True,
             ) if cfg.WANDB.ENABLE else tf.keras.callbacks.Callback()
         ]
 
