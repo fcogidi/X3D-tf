@@ -161,12 +161,12 @@ def main(_):
             tf.keras.callbacks.ModelCheckpoint(
                 os.path.join(cfg.TRAIN.MODEL_DIR, 'ckpt_{epoch:d}'),
                 verbose=1,
-                save_weights_only=True,
+                save_best_only=True,
                 save_freq=cfg.TRAIN.SAVE_CHECKPOINTS_EVERY or 'epoch',
             ),
             WandbCallback(
                 verbose=1,
-                save_weights_only=True
+                save_best_only=True,
             ) if cfg.WANDB.ENABLE else tf.keras.callbacks.Callback()
         ]
 
