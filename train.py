@@ -1,7 +1,6 @@
 import os
 import math
 import wandb
-import functools
 import tensorflow as tf
 import tensorflow_addons as tfa
 from absl import app, flags, logging
@@ -21,33 +20,37 @@ flags.mark_flag_as_required('config_file_path')
 
 FLAGS = flags.FLAGS
 
-def setup_model(model, cfg):
+def load_model(model, cfg, ckpt_path):
   """Compile model with loss function, model optimizers and metrics."""
-  opt_str = cfg.TRAIN.OPTIMIZER.lower()
-  if opt_str == 'sgd':
-    opt = tfa.optimizers.SGDW(
-        learning_rate=cfg.TRAIN.WARMUP_LR,
-        weight_decay=cfg.TRAIN.WEIGHT_DECAY,
-        momentum=cfg.TRAIN.MOMENTUM)
-  elif opt_str == 'adam':
-    opt = tfa.optimizers.AdamW(
-        learning_rate=cfg.TRAIN.WARMUP_LR,
-        weight_decay=cfg.TRAIN.WEIGHT_DECAY)
+  if ckpt_path:
+    logging.info(f'Loading model from checkpoint {ckpt_path}')
+    model = tf.keras.models.load_model(ckpt_path)
   else:
-    raise NotImplementedError
+    opt_str = cfg.TRAIN.OPTIMIZER.lower()
+    if opt_str == 'sgd':
+      opt = tfa.optimizers.SGDW(
+          learning_rate=cfg.TRAIN.WARMUP_LR,
+          weight_decay=cfg.TRAIN.WEIGHT_DECAY,
+          momentum=cfg.TRAIN.MOMENTUM)
+    elif opt_str == 'adam':
+      opt = tfa.optimizers.AdamW(
+          learning_rate=cfg.TRAIN.WARMUP_LR,
+          weight_decay=cfg.TRAIN.WEIGHT_DECAY)
+    else:
+      raise NotImplementedError
 
-  if cfg.NETWORK.MIXED_PRECISION:
-    opt = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
-        opt, 'dynamic')
-  
-  model.compile(
-      optimizer=opt,
-      loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-      metrics=[
-          tf.keras.metrics.SparseCategoricalAccuracy(name='acc'),
-          tf.keras.metrics.SparseTopKCategoricalAccuracy(
-              k=5,
-              name='top_5_acc')])
+    if cfg.NETWORK.MIXED_PRECISION:
+      opt = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
+          opt, 'dynamic')
+    
+    model.compile(
+        optimizer=opt,
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+        metrics=[
+            tf.keras.metrics.SparseCategoricalAccuracy(name='acc'),
+            tf.keras.metrics.SparseTopKCategoricalAccuracy(
+                k=5,
+                name='top_5_acc')])
 
   return model
 
@@ -63,7 +66,7 @@ def main(_):
 
   # init wandb
   if cfg.WANDB.ENABLE:
-    wandb.tensorboard.patch(root_logdir=cfg.TRAIN.MODEL_DIR)
+    wandb.tensorboard.patch(root_logdir='...')
     wandb.init(
         job_type='train',
         group=cfg.WANDB.GROUP_NAME,
@@ -134,14 +137,10 @@ def main(_):
 
   with strategy.scope():
     model = x3d.X3D(cfg)
-    model = setup_model(model, cfg)
 
     # allow restarting from checkpoint
     ckpt_path = tf.train.latest_checkpoint(cfg.TRAIN.MODEL_DIR)
-    if ckpt_path and (tf.train.list_variables(ckpt_path)[0][0] ==
-      '_CHECKPOINTABLE_OBJECT_GRAPH'):
-      logging.info(f'Loading from checkpoint {ckpt_path}')
-      model.load_weights(ckpt_path)
+    model = load_model(model, cfg, ckpt_path)
 
     model.fit(
         get_dataset(cfg, True),
@@ -166,7 +165,7 @@ def main(_):
             ),
             WandbCallback(
                 verbose=1,
-                save_best_only=True,
+                save_weights_only=True,
             ) if cfg.WANDB.ENABLE else tf.keras.callbacks.Callback()
         ]
 
