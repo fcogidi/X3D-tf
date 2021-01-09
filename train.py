@@ -132,7 +132,7 @@ def main(_):
 
       return lr
     else:
-      return cfg.TRAIN.WARMUP_LR + (
+      return cfg.TRAIN.WARMUP_LR + ((cfg.TRAIN.WARMUP_EPOCHS - epoch) *
           (cfg.TRAIN.BASE_LR - cfg.TRAIN.WARMUP_LR) / cfg.TRAIN.WARMUP_EPOCHS)
 
   with strategy.scope():
