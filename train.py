@@ -82,6 +82,8 @@ def main(_):
     tf.random.set_seed(1111)
     logging.set_verbosity(logging.DEBUG)
 
+  strategy = utils.get_strategy(cfg)
+  
   # mixed precision
   precision = 'float32'
   if cfg.NETWORK.MIXED_PRECISION:
@@ -113,8 +115,6 @@ def main(_):
       new_lr = cfg.TRAIN.WARMUP_LR + (epoch *
           (cfg.TRAIN.BASE_LR - cfg.TRAIN.WARMUP_LR) / cfg.TRAIN.WARMUP_EPOCHS)
     return new_lr
-
-  strategy = utils.get_strategy(cfg)
 
   with strategy.scope():
     model = x3d.X3D(cfg)
