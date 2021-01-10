@@ -2,7 +2,7 @@ import time
 import tensorflow as tf
 
 from model.x3d import X3D
-from config import get_default_config
+from configs.default import get_default_config
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 

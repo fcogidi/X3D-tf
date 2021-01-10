@@ -1,4 +1,7 @@
+import os
 import tensorflow as tf
+from absl import logging
+from wandb.keras import WandbCallback
 
 @tf.function
 def normalize(clips, mean, std, norm_value=255):
@@ -67,3 +70,50 @@ def denormalize(clips, mean, std, norm_value=255, out_dtype=tf.uint8):
   all_frames = tf.cast(all_frames, out_dtype)
 
   return tf.reshape(all_frames, tf.shape(clips))
+
+def get_callbacks(cfg, lr_schedule, debug):
+  callbacks = []
+  lr = tf.keras.callbacks.LearningRateScheduler(lr_schedule, 1),
+  tb = tf.keras.callbacks.TensorBoard(
+      log_dir=cfg.TRAIN.MODEL_DIR,
+      profile_batch=debug,
+      write_images=True,
+      update_freq=cfg.TRAIN.SAVE_CHECKPOINTS_EVERY or 'epoch'
+  )
+  ckpt = tf.keras.callbacks.ModelCheckpoint(
+      os.path.join(cfg.TRAIN.MODEL_DIR, 'ckpt_{epoch:d}'),
+      verbose=1,
+      save_best_only=True,
+      save_freq=cfg.TRAIN.SAVE_CHECKPOINTS_EVERY or 'epoch',
+  )
+  callbacks.append(lr, tb, ckpt)
+  wandb = WandbCallback(
+      verbose=1,
+      save_weights_only=True,
+  )
+  if cfg.WANDB.ENABLE:
+    callbacks.append(wandb)
+  
+  return callbacks
+
+def get_strategy(cfg):
+  # training strategy setup
+  avail_gpus = tf.config.list_physical_devices('GPU')
+  for gpu in avail_gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+    
+  if len(avail_gpus) > 1 and cfg.TRAIN.MULTI_GPU:
+    devices = []
+    for num in range(cfg.TRAIN.NUM_GPUS):
+      if num < len(avail_gpus):
+        id = int(avail_gpus[num].name.split(':')[-1])
+        devices.append(f'/gpu:{id}')
+    assert len(devices) > 1
+    strategy = tf.distribute.MirroredStrategy(devices)
+  elif len(avail_gpus) == 1:
+    strategy = tf.distribute.OneDeviceStrategy('device:GPU:0')
+  else:
+    logging.warn('Using CPU')
+    strategy = tf.distribute.OneDeviceStrategy('device:CPU:0')
+
+  return strategy
