@@ -19,8 +19,8 @@ DATA:
   TRAIN_CROP_SIZE: 224
   TEST_CROP_SIZE: 224
   #TEST_CROP_SIZE: 256 # use if TEST.NUM_SPATIAL_CROPS: 3
-  TRAIN_LABEL_PATH: "dataset/kinetics400/train.txt"
-  TEST_LABEL_PATH: "dataset/kinetics400/val.txt"
+  TRAIN_LABEL_PATH: "datasets/kinetics400/train.txt"
+  TEST_LABEL_PATH: "datasets/kinetics400/val.txt"
 TRAIN:
   DATASET_SIZE: 234619
   BATCH_SIZE: 64
