@@ -86,7 +86,7 @@ def get_callbacks(cfg, lr_schedule, debug):
       save_best_only=True,
       save_freq=cfg.TRAIN.SAVE_CHECKPOINTS_EVERY or 'epoch',
   )
-  callbacks.append(lr, tb, ckpt)
+  callbacks.extend([lr, tb, ckpt])
   wandb = WandbCallback(
       verbose=1,
       save_weights_only=True,
