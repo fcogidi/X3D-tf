@@ -81,8 +81,9 @@ def get_callbacks(cfg, lr_schedule, debug):
       update_freq=cfg.TRAIN.SAVE_CHECKPOINTS_EVERY or 'epoch'
   )
   ckpt = tf.keras.callbacks.ModelCheckpoint(
-      os.path.join(cfg.TRAIN.MODEL_DIR, 'ckpt_{epoch:d}'),
+      os.path.join(cfg.TRAIN.MODEL_DIR, 'model.h5'),
       verbose=1,
+      monitor='val_acc',
       save_best_only=True,
       save_freq=cfg.TRAIN.SAVE_CHECKPOINTS_EVERY or 'epoch',
   )

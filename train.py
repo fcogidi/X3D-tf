@@ -23,7 +23,7 @@ def load_model(model, cfg, ckpt_path):
   """Compile model with loss function, model optimizers and metrics."""
   if ckpt_path:
     logging.info(f'Loading model from checkpoint {ckpt_path}')
-    model = tf.keras.models.load_model(ckpt_path)
+    model = tf.keras.models.load_model(cfg.TRAIN.MODEL_DIR)
   else:
     opt_str = cfg.TRAIN.OPTIMIZER.lower()
     if opt_str == 'sgd':
@@ -105,7 +105,7 @@ def main(_):
   def lr_schedule(epoch, lr):
     """
     Implements the learning rate schedule used in
-      https://arxiv.org/abs/2004.04730      
+      https://arxiv.org/abs/2004.04730
     """
     if epoch > cfg.TRAIN.WARMUP_EPOCHS:
       cosine = tf.math.cos(
@@ -129,9 +129,7 @@ def main(_):
         steps_per_epoch=cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE,
         validation_data=get_dataset(cfg, False),
         verbose=1,
-        callbacks=utils.get_callbacks(cfg, lr_schedule, FLAGS.debug)
-
-    )
+        callbacks=utils.get_callbacks(cfg, lr_schedule, FLAGS.debug))
 
 if __name__ == "__main__":
   app.run(main)
