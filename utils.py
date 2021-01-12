@@ -137,10 +137,10 @@ def get_strategy(cfg, num_gpus):
   avail_gpus = tf.config.list_physical_devices('GPU')
   for gpu in avail_gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
-    
+
   if num_gpus > 1 and len(avail_gpus) > 1:
     devices = []
-    for num in range(cfg.TRAIN.NUM_GPUS):
+    for num in range(num_gpus):
       if num < len(avail_gpus):
         id = int(avail_gpus[num].name.split(':')[-1])
         devices.append(f'/gpu:{id}')
