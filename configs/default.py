@@ -65,14 +65,6 @@ _C.DATA.TRAIN_JITTER_SCALES = [182, 228]
 # the spatial resolution of the input
 _C.DATA.TRAIN_CROP_SIZE = 112
 
-# path to .txt file containing path_to_video and label
-# for training set
-_C.DATA.TRAIN_LABEL_PATH = " "
-
-# path to .txt file containing path_to_video and label
-# for test set
-_C.DATA.TEST_LABEL_PATH = " "
-
 _C.DATA.TEST_CROP_SIZE = 160
 
 # The mean value of the video raw pixels across the R G B channels.
@@ -86,9 +78,6 @@ _C.DATA.STD = [0.225, 0.225, 0.225]
 #
 _C.TRAIN = CN()
 
-# whether to use multiple gpus or single gpu
-_C.TRAIN.MULTI_GPU = False
-
 # number of examples in the training set
 _C.TRAIN.DATASET_SIZE = 0
 
@@ -97,9 +86,6 @@ _C.TRAIN.BATCH_SIZE = 1
 
 # number of training epochs
 _C.TRAIN.EPOCHS = 1
-
-# directory for logging/saving model
-_C.TRAIN.MODEL_DIR = " "
 
 # loss function
 _C.TRAIN.OPTIMIZER = "SGD"
@@ -110,9 +96,6 @@ _C.TRAIN.MOMENTUM = 0.9
 # weight decay factor
 _C.TRAIN.WEIGHT_DECAY = 0.00005
 
-# number of gpus to use
-_C.TRAIN.NUM_GPUS = 1
-
 # base learning rate
 _C.TRAIN.BASE_LR = 0.1
 
@@ -121,9 +104,6 @@ _C.TRAIN.WARMUP_EPOCHS = 1
 
 # initial learning rate during warmup
 _C.TRAIN.WARMUP_LR = 0.01
-
-# number of steps to save checkpoints
-_C.TRAIN.SAVE_CHECKPOINTS_EVERY = None
 
 #
 # configuration for inference

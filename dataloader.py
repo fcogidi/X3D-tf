@@ -17,10 +17,6 @@ class InputReader:
     """
     self._cfg = cfg
     self._is_training = is_training
-    if self._is_training:
-      self._label_path = self._cfg.DATA.TRAIN_LABEL_PATH
-    else:
-      self._label_path = self._cfg.DATA.TEST_LABEL_PATH
   
   def decode_video(self, line):
     """
@@ -103,7 +99,7 @@ class InputReader:
     options.experimental_optimization.parallel_batch = True
     return options
 
-  def __call__(self, batch_size=None):
+  def __call__(self, label_path, batch_size=None):
     """Loads, transforms and batches data"""
     temporal_transform = TemporalTransforms(
         sample_rate=self._cfg.DATA.FRAME_RATE,
@@ -119,7 +115,7 @@ class InputReader:
         num_crops=self._cfg.TEST.NUM_SPATIAL_CROPS,
         random_hflip=self._is_training)
 
-    dataset = tf.data.TextLineDataset(self._label_path).prefetch(1)
+    dataset = tf.data.TextLineDataset(label_path).prefetch(1)
       
     if self._is_training:
       dataset = dataset.shuffle(128).repeat()

@@ -1,7 +1,43 @@
 import os
+import math
 import tensorflow as tf
 from absl import logging
 from wandb.keras import WandbCallback
+
+def round_width(width, multiplier, min_depth=8, divisor=8):
+  """
+  Round width of filters based on width multiplier
+  from: https://github.com/facebookresearch/SlowFast/blob/master/slowfast/models/video_model_builder.py
+
+  Args:
+      width (int): the channel dimensions of the input.
+      multiplier (float): the multiplication factor.
+      min_width (int, optional): the minimum width after multiplication.
+          Defaults to 8.
+      divisor (int, optional): the new width should be dividable by divisor.
+          Defaults to 8.
+  """
+  if not multiplier:
+      return width
+
+  width *= multiplier
+  min_depth = min_depth or divisor
+  new_filters = max(
+      min_depth, int(width + divisor / 2) // divisor * divisor
+  )
+  if new_filters < 0.9 * width:
+      new_filters += divisor
+  return int(new_filters)
+
+def round_repeats(repeats, multiplier):
+  """
+  Round number of layers based on depth multiplier.
+  Reference: https://github.com/facebookresearch/SlowFast/blob/master/slowfast/models/video_model_builder.py
+  """
+  multiplier = multiplier
+  if not multiplier:
+      return repeats
+  return int(math.ceil(multiplier * repeats))
 
 @tf.function
 def normalize(clips, mean, std, norm_value=255):
@@ -71,21 +107,20 @@ def denormalize(clips, mean, std, norm_value=255, out_dtype=tf.uint8):
 
   return tf.reshape(all_frames, tf.shape(clips))
 
-def get_callbacks(cfg, lr_schedule, debug):
+def get_callbacks(cfg, lr_schedule, flags):
   callbacks = []
   lr = tf.keras.callbacks.LearningRateScheduler(lr_schedule, 1),
   tb = tf.keras.callbacks.TensorBoard(
-      log_dir=cfg.TRAIN.MODEL_DIR,
-      profile_batch=debug,
+      log_dir=flags.model_dir,
+      profile_batch=flags.debug,
       write_images=True,
-      update_freq=cfg.TRAIN.SAVE_CHECKPOINTS_EVERY or 'epoch'
+      update_freq=flags.save_checkpoints_step or 'epoch'
   )
   ckpt = tf.keras.callbacks.ModelCheckpoint(
-      os.path.join(cfg.TRAIN.MODEL_DIR, 'model.h5'),
+      os.path.join(flags.model_dir, 'ckpt-{epoch:d}'),
       verbose=1,
       monitor='val_acc',
-      save_best_only=True,
-      save_freq=cfg.TRAIN.SAVE_CHECKPOINTS_EVERY or 'epoch',
+      save_freq=flags.save_checkpoints_step or 'epoch',
   )
   callbacks.extend([lr, tb, ckpt])
   wandb = WandbCallback(
@@ -97,13 +132,13 @@ def get_callbacks(cfg, lr_schedule, debug):
   
   return callbacks
 
-def get_strategy(cfg):
+def get_strategy(cfg, num_gpus):
   # training strategy setup
   avail_gpus = tf.config.list_physical_devices('GPU')
   for gpu in avail_gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
     
-  if len(avail_gpus) > 1 and cfg.TRAIN.MULTI_GPU:
+  if num_gpus > 1 and len(avail_gpus) > 1:
     devices = []
     for num in range(cfg.TRAIN.NUM_GPUS):
       if num < len(avail_gpus):
@@ -111,7 +146,7 @@ def get_strategy(cfg):
         devices.append(f'/gpu:{id}')
     assert len(devices) > 1
     strategy = tf.distribute.MirroredStrategy(devices)
-  elif len(avail_gpus) == 1:
+  elif len(avail_gpus) == 1 and num_gpus == 1:
     strategy = tf.distribute.OneDeviceStrategy('device:GPU:0')
   else:
     logging.warn('Using CPU')
