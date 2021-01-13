@@ -97,7 +97,8 @@ def main(_):
         project=cfg.WANDB.PROJECT_NAME,
         sync_tensorboard=cfg.WANDB.TENSORBOARD,
         mode=cfg.WANDB.MODE,
-        config=dict(cfg)
+        config=dict(cfg),
+        resume='auto'
     )
 
   if FLAGS.debug:

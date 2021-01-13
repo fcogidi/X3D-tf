@@ -49,7 +49,8 @@ class TemporalTransforms:
     num_loops = tf.cast(num_loops, tf.int32)
     indices = tf.tile(indices, multiples=num_loops)
 
-    indices = tf.strided_slice(indices, start_index, end_index, [self._sample_rate])
+    indices = tf.strided_slice(indices, start_index, end_index,
+      [self._sample_rate] if self._is_training else [1])
     clip = tf.gather(video, indices, axis=0)
 
     if not self._is_training: 
