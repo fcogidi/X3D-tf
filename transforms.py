@@ -40,7 +40,10 @@ class TemporalTransforms:
     # is simply the inverse of one used by tf.strided_slice to
     # to calculate the size of elements to extract: 
     # (end-begin)/stride
-    end_index = start_index + (self._num_frames * self._sample_rate * num_views)
+    if self._is_training:
+      end_index = start_index + (self._num_frames * self._sample_rate)
+    else:
+      end_index = start_index + (self._num_frames * num_views)
     end_index = tf.cast(end_index, tf.int32)
 
     # loop the indices to enusre that enough frames are available
@@ -53,8 +56,8 @@ class TemporalTransforms:
       [self._sample_rate] if self._is_training else [1])
     clip = tf.gather(video, indices, axis=0)
 
-    if not self._is_training: 
-      return tf.reshape(clip, 
+    if not self._is_training:
+      return tf.reshape(clip,
       [num_views, self._num_frames, tf.shape(video)[1], tf.shape(video)[2], tf.shape(video)[3]])
     return tf.expand_dims(clip, axis=0)
 
