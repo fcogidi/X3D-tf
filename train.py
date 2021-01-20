@@ -126,7 +126,7 @@ def main(_):
     """
     if epoch > cfg.TRAIN.WARMUP_EPOCHS:
       new_lr = cfg.TRAIN.BASE_LR * (
-          0.5 * tf.math.cos(tf.constant(math.pi) * (epoch/cfg.TRAIN.EPOCHS))+ 1)
+          0.5 * (tf.math.cos(tf.constant(math.pi) * (epoch/cfg.TRAIN.EPOCHS)) + 1))
     else:
       new_lr = cfg.TRAIN.WARMUP_LR + (
           epoch * (cfg.TRAIN.BASE_LR - cfg.TRAIN.WARMUP_LR) / cfg.TRAIN.WARMUP_EPOCHS)
