@@ -110,10 +110,7 @@ def main(_):
   strategy = utils.get_strategy(cfg, FLAGS.num_gpus)
   
   # mixed precision
-  precision = 'float32'
-  if FLAGS.mixed_precision:
-    if tf.config.list_physical_devices('GPU'):
-      precision = 'mixed_float16'
+  precision = utils.get_precision(FLAGS.mixed_precision)
   policy = tf.keras.mixed_precision.experimental.Policy(precision)
   tf.keras.mixed_precision.experimental.set_policy(policy)
   
