@@ -112,10 +112,10 @@ def get_callbacks(cfg, lr_schedule, flags):
   lr = tf.keras.callbacks.LearningRateScheduler(lr_schedule, 1),
   tb = tf.keras.callbacks.TensorBoard(
       log_dir=flags.model_dir,
-      profile_batch=2, #flags.debug
+      profile_batch=10, #flags.debug
       write_images=True,
       write_graph=True,
-      histogram_freq=5,
+      histogram_freq=10,
       update_freq=flags.save_checkpoints_step or 'epoch'
   )
   ckpt = tf.keras.callbacks.ModelCheckpoint(

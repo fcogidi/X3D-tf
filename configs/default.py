@@ -31,8 +31,8 @@ _C.NETWORK.NUM_CLASSES = 400
 # dropout rate for the dropout layer before the final fully-connected layer
 _C.NETWORK.DROPOUT_RATE = 0.0
 
-# whether to use mixed precision or not
-_C.NETWORK.MIXED_PRECISION = False
+# weight decay factor
+_C.NETWORK.WEIGHT_DECAY = 0.00005
 
 #
 # paramters for batch normalization layers
@@ -93,9 +93,6 @@ _C.TRAIN.OPTIMIZER = "SGD"
 # momentum for optimizer
 _C.TRAIN.MOMENTUM = 0.9
 
-# weight decay factor
-_C.TRAIN.WEIGHT_DECAY = 0.00005
-
 # base learning rate
 _C.TRAIN.BASE_LR = 0.1
 
@@ -115,9 +112,6 @@ _C.TEST.NUM_SPATIAL_CROPS = 3
 
 # number of temporal views
 _C.TEST.NUM_TEMPORAL_VIEWS = 1
-
-# number of examples in the training set
-_C.TEST.DATASET_SIZE = 0
 
 # batch size
 _C.TEST.BATCH_SIZE = 1

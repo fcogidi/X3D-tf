@@ -13,7 +13,7 @@ class TemporalTransforms:
     self._num_views = num_views
 
   @tf.function
-  def get_temporal_sample(self, video, num_views=1):
+  def get_temporal_sample(self, video):
     """
     Temporally sample a clip from the given video by
       looping the video until the desired number of frames 
@@ -21,7 +21,6 @@ class TemporalTransforms:
 
     Args:
       video (tf.Tensor): Full video
-      num_views (int): number of clips to sample from the video
 
     Returns:
       tuple (tf.Tensor, tf.Tensor): clip from video, clip label
@@ -43,7 +42,7 @@ class TemporalTransforms:
     if self._is_training:
       end_index = start_index + (self._num_frames * self._sample_rate)
     else:
-      end_index = start_index + (self._num_frames * num_views)
+      end_index = start_index + (self._num_frames * self._num_views)
     end_index = tf.cast(end_index, tf.int32)
 
     # loop the indices to enusre that enough frames are available
@@ -58,14 +57,11 @@ class TemporalTransforms:
 
     if not self._is_training:
       return tf.reshape(clip,
-      [num_views, self._num_frames, tf.shape(video)[1], tf.shape(video)[2], tf.shape(video)[3]])
+      [self._num_views, self._num_frames, tf.shape(video)[1], tf.shape(video)[2], tf.shape(video)[3]])
     return tf.expand_dims(clip, axis=0)
 
   def __call__(self, video, label):
-    if self._is_training:
-      clips = self.get_temporal_sample(video)
-    else:
-      clips = self.get_temporal_sample(video, self._num_views)
+    clips = self.get_temporal_sample(video)
     return clips, label
 
 class SpatialTransforms:

@@ -1,3 +1,4 @@
+import os
 import decord
 import tensorflow as tf
 from yacs.config import CfgNode
@@ -7,6 +8,7 @@ from transforms import TemporalTransforms, SpatialTransforms
 class InputReader:
   def __init__(self, 
               cfg: CfgNode,
+              flags,
               is_training: bool):
     """__init__()
 
@@ -16,6 +18,7 @@ class InputReader:
           reading training dataset
     """
     self._cfg = cfg
+    self._flags = flags
     self._is_training = is_training
   
   def decode_video(self, line):
@@ -44,21 +47,11 @@ class InputReader:
     # convert label to integer
     label = tf.strings.to_number(split[1], out_type=tf.int32)
 
-    try:
-      # decode video frames
-      decord.bridge.set_bridge('tensorflow')
-      vr = decord.VideoReader(path)
-      num_frames = len(vr)
-      video = vr.get_batch(range(num_frames))
-    except Exception:
-      print(f"\nFailed to decode video {path}\n")
-      # TODO: write path to failed files to disk
-      video = tf.zeros([
-          self._cfg.DATA.TEMP_DURATION * 10,
-          self._cfg.DATA.TEST_CROP_SIZE,
-          self._cfg.DATA.TEST_CROP_SIZE,
-          self._cfg.DATA.NUM_INPUT_CHANNELS], 
-        tf.uint8)
+    # decode video frames
+    decord.bridge.set_bridge('tensorflow')
+    vr = decord.VideoReader(path)
+    num_frames = len(vr)
+    video = vr.get_batch(range(num_frames))
 
     return video, label
   
@@ -84,7 +77,7 @@ class InputReader:
           self._cfg.DATA.NUM_INPUT_CHANNELS
       ))
 
-    if self._cfg.NETWORK.MIXED_PRECISION:
+    if self._flags.mixed_precision:
       dtype = tf.keras.mixed_precision.experimental.global_policy().compute_dtype
       videos = tf.cast(videos, dtype)
     return videos, label
@@ -93,10 +86,10 @@ class InputReader:
   def dataset_options(self):
     """Returns set options for td.data.Dataset API"""
     options = tf.data.Options()
-    options.experimental_deterministic = not self._is_training
-    options.experimental_threading.max_intra_op_parallelism = 1
     options.experimental_optimization.map_vectorization.enabled = True
     options.experimental_optimization.map_parallelization = True
+    options.experimental_threading.max_intra_op_parallelism = 1
+    options.experimental_deterministic = not self._is_training
     options.experimental_optimization.parallel_batch = True
     return options
 
@@ -116,10 +109,11 @@ class InputReader:
         num_crops=self._cfg.TEST.NUM_SPATIAL_CROPS,
         random_hflip=self._is_training)
 
-    dataset = tf.data.TextLineDataset(label_path).prefetch(1).cache()
+    dataset = tf.data.TextLineDataset(label_path).cache()
       
     if self._is_training:
-      dataset = dataset.shuffle(self._cfg.TRAIN.DATASET_SIZE).repeat()
+      dataset = dataset.shuffle(self._cfg.TRAIN.DATASET_SIZE,
+        reshuffle_each_iteration=True).repeat()
 
     dataset = dataset.with_options(self.dataset_options)
 
@@ -143,6 +137,9 @@ class InputReader:
       dataset = dataset.map(
           lambda *args: self.process_batch(*args, batch_size),
           num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    if not self._is_training:
+      # cache validation dataset since processing is deterministic
+      dataset = dataset.cache(os.path.join(self._flags.model_dir, 'val_cache.tmp'))
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
     return dataset

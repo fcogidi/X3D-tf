@@ -2,7 +2,6 @@ import os
 import math
 import wandb
 import tensorflow as tf
-import tensorflow_addons as tfa
 from absl import app, flags, logging
 
 from configs.default import get_default_config
@@ -42,6 +41,7 @@ def get_dataset(cfg, label_path, is_training):
   """Returns a tf.data dataset"""
   return dataloader.InputReader(
       cfg,
+      FLAGS,
       is_training
   )(label_path, cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
 
@@ -49,14 +49,13 @@ def load_model(model, cfg):
   """Compile model with loss function, model optimizers and metrics."""
   opt_str = cfg.TRAIN.OPTIMIZER.lower()
   if opt_str == 'sgd':
-    opt = tfa.optimizers.SGDW(
+    opt = tf.optimizers.SGD(
         learning_rate=cfg.TRAIN.WARMUP_LR,
-        weight_decay=cfg.TRAIN.WEIGHT_DECAY,
-        momentum=cfg.TRAIN.MOMENTUM)
+        momentum=cfg.TRAIN.MOMENTUM,
+        nesterov=True)
   elif opt_str == 'adam':
-    opt = tfa.optimizers.AdamW(
-        learning_rate=cfg.TRAIN.WARMUP_LR,
-        weight_decay=cfg.TRAIN.WEIGHT_DECAY)
+    opt = tf.optimizers.Adam(
+        learning_rate=cfg.TRAIN.WARMUP_LR)
   else:
     raise NotImplementedError(f'{opt_str} not supported')
 

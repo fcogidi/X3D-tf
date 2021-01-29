@@ -1,5 +1,6 @@
 import tensorflow as tf
 import tensorflow.keras as K
+from tensorflow.python.keras import regularizers
 from yacs.config import CfgNode
 
 import utils
@@ -42,8 +43,12 @@ class X3D(K.Model):
         [5, utils.round_width(cfg.NETWORK.C1_CHANNELS * self._multiplier, 4)],
         [3, utils.round_width(cfg.NETWORK.C1_CHANNELS * self._multiplier, 8)]]
 
+    # regularizer
+    l2 = K.regularizers.L2(cfg.NETWORK.WEIGHT_DECAY)
+    
     # the first layer of the model before the residual stages
     self.conv1 = X3D_Stem(
+        regularizer=l2,
         bn_cfg=cfg.NETWORK.BN,
         out_channels=self._conv1_dim,
         temp_filter_size=cfg.NETWORK.C1_TEMP_FILTER)
@@ -66,7 +71,8 @@ class X3D(K.Model):
           inner_channels=inner_dim,
           out_channels=out_dim,
           depth = block_depth,
-          bn_cfg=self._bn_cfg)
+          bn_cfg=self._bn_cfg,
+          regularizer=l2)
       self.stages.append(stage)
 
     self.conv5 = K.Sequential(name='conv_5')
@@ -77,7 +83,8 @@ class X3D(K.Model):
             strides=(1, 1, 1),
             padding='valid',
             use_bias=False,
-            data_format='channels_last'))
+            data_format='channels_last',
+            kernel_regularizer=l2))
     self.conv5.add(
         K.layers.BatchNormalization(
             axis=-1,
@@ -91,12 +98,14 @@ class X3D(K.Model):
         strides=1,
         use_bias=False,
         activation='relu',
-        name='fc_1')
+        name='fc_1',
+        kernel_regularizer=l2)
     self.dropout = K.layers.Dropout(rate=cfg.NETWORK.DROPOUT_RATE)
     self.fc2 = K.layers.Dense(
         units=self.num_classes,
         use_bias=True,
-        name='fc_2')
+        name='fc_2',
+        kernel_regularizer=l2)
     # model output needs to be float32 even if mixed
     # precision policy is set to float16
     self.softmax = K.layers.Softmax(dtype='float32')
@@ -115,7 +124,7 @@ class X3D(K.Model):
       # average predictions
       out = tf.reshape(out, (-1, self._num_preds, 1, 1, 1, out.shape[-1]))
       out = tf.reduce_mean(out, 1)
-    return tf.reshape(out, (-1, out.shape[-1]))
+    return tf.reshape(out, (-1, self.num_classes))
 
   def summary(self, input_shape):
       x = K.Input(shape=input_shape)
@@ -130,12 +139,14 @@ class X3D_Stem(K.layers.Layer):
   '''
   def __init__(self,
               bn_cfg: CfgNode,
+              regularizer: K.regularizers,
               out_channels: int = 24,
               temp_filter_size: int = 5):
     '''
     Args:
         bn_cfg (CfgNode) containing parameters for the batch
             normalization layer
+        regularizer (tf.Keras.regularizers): regularization function
         out_channels (int): number of filters to use in
             the convolutional layers
         temp_filter_size (int): the filter size for the
@@ -169,7 +180,8 @@ class X3D_Stem(K.layers.Layer):
         kernel_size=(1, 3, 3),
         strides=(1, 2, 2),
         use_bias=False,
-        data_format='channels_last')
+        data_format='channels_last',
+        kernel_regularizer=regularizer)
 
     # temporal convolution
     self.conv_t = K.layers.Conv3D(
@@ -178,7 +190,8 @@ class X3D_Stem(K.layers.Layer):
         strides=(1, 1, 1),
         use_bias=False,
         groups=out_channels,
-        data_format='channels_last')
+        data_format='channels_last',
+        kernel_regularizer=regularizer)
 
     self.bn = K.layers.BatchNormalization(
         axis=-1,
@@ -204,6 +217,7 @@ class Bottleneck(K.layers.Layer):
   def __init__(self,
               channels: tuple,
               bn_cfg: CfgNode,
+              regularizer: K.regularizers,
               stride: int = 1,
               block_index: int = 0,
               se_ratio: float = 0.0625,
@@ -215,6 +229,7 @@ class Bottleneck(K.layers.Layer):
         channels (tuple): number of channels for each layer in the bottleneck
             order: (number of channles in first two layers, number of channels in last layer)
         bn_cfg (CfgNode): holds the parameters for the batch
+        regularizer (tf.Keras.regularizers): regularization function
         stride (int, optional): stride in the spatial dimension.
             Defaults to 1
         block_index (int): the index of the current block
@@ -234,7 +249,8 @@ class Bottleneck(K.layers.Layer):
         strides=(1, 1, 1),
         padding='same',
         use_bias=False,
-        data_format='channels_last')
+        data_format='channels_last',
+        kernel_regularizer=regularizer)
     self.bn_a = K.layers.BatchNormalization(
         axis=-1,
         epsilon=self._bn_cfg.EPS,
@@ -247,7 +263,8 @@ class Bottleneck(K.layers.Layer):
         padding='same',
         use_bias=False,
         groups=channels[0], # turns out to be necessary to reduce model params
-        data_format='channels_last')
+        data_format='channels_last',
+        kernel_regularizer=regularizer)
     self.bn_b = K.layers.BatchNormalization(
         axis=-1,
         epsilon=self._bn_cfg.EPS,
@@ -269,7 +286,8 @@ class Bottleneck(K.layers.Layer):
           kernel_size=1,
           strides=1,
           use_bias=True,
-          activation='sigmoid')
+          activation='sigmoid',
+          kernel_regularizer=regularizer)
 
     self.c = K.layers.Conv3D(
         filters=channels[1],
@@ -277,7 +295,8 @@ class Bottleneck(K.layers.Layer):
         strides=(1, 1, 1),
         padding='same',
         use_bias=False,
-        data_format='channels_last')
+        data_format='channels_last',
+        kernel_regularizer=regularizer)
     self.bn_c = K.layers.BatchNormalization(
         axis=-1,
         epsilon=self._bn_cfg.EPS,
@@ -308,6 +327,7 @@ class ResBlock(K.layers.Layer):
   def __init__(self,
               channels: tuple,
               bn_cfg: CfgNode,
+              regularizer: K.regularizers,
               stride: int = 1,
               se_ratio: float = 0.0625,
               temp_kernel_size: int = 3) -> None:
@@ -318,6 +338,7 @@ class ResBlock(K.layers.Layer):
         channels (tuple): (input_channels, inner_channels, output_channels)
         bn_cfg (CfgNode) containing parameters for the batch
             normalization layer
+        regularizer (tf.Keras.regularizers): regularization function
         stride (int, optional): stride in the spatial dimension.
             Defaults to 1
         se_ratio (float, optional): the width multiplier for the squeeze-excitation
@@ -342,7 +363,8 @@ class ResBlock(K.layers.Layer):
           strides=(1, stride, stride),
           padding='valid',
           use_bias=False,
-          data_format='channels_last')
+          data_format='channels_last',
+          kernel_initializer=regularizer)
       self.bn_r = K.layers.BatchNormalization(
           axis=-1,
           epsilon=self._bn_cfg.EPS,
@@ -352,6 +374,7 @@ class ResBlock(K.layers.Layer):
         channels=channels[1:],
         stride=stride,
         bn_cfg=self._bn_cfg,
+        regularizer=regularizer,
         block_index=ResBlock._block_index,
         se_ratio=se_ratio,
         temp_kernel_size=temp_kernel_size)
@@ -382,6 +405,7 @@ class ResStage(K.layers.Layer):
               out_channels: int,
               depth: int,
               bn_cfg: CfgNode,
+              regularizer: K.regularizers,
               se_ratio: float = 0.0625,
               temp_kernel_size: int = 3):
     '''
@@ -396,6 +420,7 @@ class ResStage(K.layers.Layer):
             is repeated
         bn_cfg (CfgNode) containing parameters for the batch
             normalization layer
+        regularizer (tf.Keras.regularizers): regularization function
         se_ratio (float, optional): the width multiplier for the squeeze-excitation
             operation. Defaults to 0.0625
         temp_kernel_size (int, optional): the filter size for the
@@ -418,6 +443,7 @@ class ResStage(K.layers.Layer):
           ResBlock(
             bn_cfg=self._bn_cfg,
             se_ratio=se_ratio,
+            regularizer=regularizer,
             temp_kernel_size=temp_kernel_size,
             stride=2 if i == 0 else 1,
             channels=(
