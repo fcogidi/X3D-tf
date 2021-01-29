@@ -114,6 +114,8 @@ def get_callbacks(cfg, lr_schedule, flags):
       log_dir=flags.model_dir,
       profile_batch=2, #flags.debug
       write_images=True,
+      write_graph=True,
+      histogram_freq=5,
       update_freq=flags.save_checkpoints_step or 'epoch'
   )
   ckpt = tf.keras.callbacks.ModelCheckpoint(
