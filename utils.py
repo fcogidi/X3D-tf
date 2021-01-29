@@ -153,3 +153,11 @@ def get_strategy(cfg, num_gpus):
     strategy = tf.distribute.OneDeviceStrategy('device:CPU:0')
 
   return strategy
+
+def get_precision(mixed_precision):
+  # mixed precision
+  precision = 'float32'
+  if mixed_precision:
+    if tf.config.list_physical_devices('GPU'):
+      precision = 'mixed_float16'
+  return precision
