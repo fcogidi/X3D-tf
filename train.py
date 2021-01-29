@@ -41,7 +41,6 @@ def get_dataset(cfg, label_path, is_training):
   """Returns a tf.data dataset"""
   return dataloader.InputReader(
       cfg,
-      FLAGS,
       is_training
   )(label_path, cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
 

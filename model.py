@@ -364,7 +364,7 @@ class ResBlock(K.layers.Layer):
           padding='valid',
           use_bias=False,
           data_format='channels_last',
-          kernel_initializer=regularizer)
+          kernel_regularizer=regularizer)
       self.bn_r = K.layers.BatchNormalization(
           axis=-1,
           epsilon=self._bn_cfg.EPS,
