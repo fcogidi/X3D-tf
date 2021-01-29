@@ -8,6 +8,7 @@ from transforms import TemporalTransforms, SpatialTransforms
 class InputReader:
   def __init__(self, 
               cfg: CfgNode,
+              flags,
               is_training: bool):
     """__init__()
 
@@ -17,6 +18,7 @@ class InputReader:
           reading training dataset
     """
     self._cfg = cfg
+    self._flags = flags
     self._is_training = is_training
   
   def decode_video(self, line):
@@ -75,8 +77,9 @@ class InputReader:
           self._cfg.DATA.NUM_INPUT_CHANNELS
       ))
 
-    dtype = tf.keras.mixed_precision.experimental.global_policy().compute_dtype
-    videos = tf.cast(videos, dtype)
+    if self._flags.mixed_precision:
+      dtype = tf.keras.mixed_precision.experimental.global_policy().compute_dtype
+      videos = tf.cast(videos, dtype)
     return videos, label
 
   @property
