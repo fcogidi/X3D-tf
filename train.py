@@ -107,8 +107,10 @@ def main(_):
     os.environ['TF_DETERMINISTIC_OPS'] = '1'
     tf.random.set_seed(1111)
     logging.set_verbosity(logging.DEBUG)
+    tf.debugging.experimental.enable_dump_debug_info(model_dir,
+      tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
 
-  strategy = utils.get_strategy(cfg, FLAGS.num_gpus)
+  strategy = utils.get_strategy(FLAGS.num_gpus)
   
   # mixed precision
   precision = utils.get_precision(FLAGS.mixed_precision)

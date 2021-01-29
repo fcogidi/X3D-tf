@@ -112,7 +112,7 @@ def get_callbacks(cfg, lr_schedule, flags):
   lr = tf.keras.callbacks.LearningRateScheduler(lr_schedule, 1),
   tb = tf.keras.callbacks.TensorBoard(
       log_dir=flags.model_dir,
-      profile_batch=flags.debug,
+      profile_batch=2, #flags.debug
       write_images=True,
       update_freq=flags.save_checkpoints_step or 'epoch'
   )
@@ -132,7 +132,7 @@ def get_callbacks(cfg, lr_schedule, flags):
   
   return callbacks
 
-def get_strategy(cfg, num_gpus):
+def get_strategy(num_gpus):
   # training strategy setup
   avail_gpus = tf.config.list_physical_devices('GPU')
   for gpu in avail_gpus:

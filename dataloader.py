@@ -94,6 +94,7 @@ class InputReader:
     """Returns set options for td.data.Dataset API"""
     options = tf.data.Options()
     options.experimental_deterministic = not self._is_training
+    options.experimental_threading.max_intra_op_parallelism = 1
     options.experimental_optimization.map_vectorization.enabled = True
     options.experimental_optimization.map_parallelization = True
     options.experimental_optimization.parallel_batch = True
@@ -115,7 +116,7 @@ class InputReader:
         num_crops=self._cfg.TEST.NUM_SPATIAL_CROPS,
         random_hflip=self._is_training)
 
-    dataset = tf.data.TextLineDataset(label_path).prefetch(1)
+    dataset = tf.data.TextLineDataset(label_path).prefetch(1).cache()
       
     if self._is_training:
       dataset = dataset.shuffle(1024).repeat()

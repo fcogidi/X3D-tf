@@ -15,7 +15,7 @@ class TemporalTransforms:
   @tf.function
   def get_temporal_sample(self, video, num_views=1):
     """
-    Temporally sample a clip from the given video by selecting
+    Temporally sample a clip from the given video by
       looping the video until the desired number of frames 
       is achieved.
 
