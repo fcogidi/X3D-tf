@@ -118,7 +118,7 @@ class InputReader:
     dataset = tf.data.TextLineDataset(label_path).prefetch(1)
       
     if self._is_training:
-      dataset = dataset.shuffle(128).repeat()
+      dataset = dataset.shuffle(1024).repeat()
 
     dataset = dataset.with_options(self.dataset_options)
 
