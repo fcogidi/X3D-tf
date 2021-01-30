@@ -139,7 +139,7 @@ class InputReader:
           num_parallel_calls=tf.data.experimental.AUTOTUNE)
     if not self._is_training:
       # cache validation dataset since processing is deterministic
-      dataset = dataset.cache(os.path.join(self._flags.model_dir, 'val_cache.tmp'))
+      dataset = dataset.cache('/Data/home/gmi672/val_cache.tmp')
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-    
+
     return dataset
