@@ -125,11 +125,11 @@ def get_callbacks(cfg, lr_schedule, flags):
       save_freq=flags.save_checkpoints_step or 'epoch',
   )
   callbacks.extend([lr, tb, ckpt])
-  wandb = WandbCallback(
+  if cfg.WANDB.ENABLE:
+    wandb = WandbCallback(
       verbose=1,
       save_weights_only=True,
-  )
-  if cfg.WANDB.ENABLE:
+    )
     callbacks.append(wandb)
   
   return callbacks

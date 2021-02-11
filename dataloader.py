@@ -1,7 +1,7 @@
 import os
-import decord
 import tensorflow as tf
 from yacs.config import CfgNode
+from decord import VideoReader, bridge, cpu
 
 from transforms import TemporalTransforms, SpatialTransforms
 
@@ -47,11 +47,16 @@ class InputReader:
     # convert label to integer
     label = tf.strings.to_number(split[1], out_type=tf.int32)
 
-    # decode video frames
-    decord.bridge.set_bridge('tensorflow')
-    vr = decord.VideoReader(path)
-    num_frames = len(vr)
-    video = vr.get_batch(range(num_frames))
+    try:
+      # decode video frames
+      bridge.set_bridge('tensorflow')
+      vr = VideoReader(path, ctx=cpu(0))
+      num_frames = len(vr)
+      video = vr.get_batch(range(num_frames))
+    except Exception as e:
+      tf.compat.v1.logging.warn(
+        f'\nFailed to decode video at {path}. Replacing with zeros...')
+      video = tf.zeros([100, 240, 144, 3], tf.uint8)
 
     return video, label
   
@@ -137,9 +142,6 @@ class InputReader:
       dataset = dataset.map(
           lambda *args: self.process_batch(*args, batch_size),
           num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    if not self._is_training:
-      # cache validation dataset since processing is deterministic
-      dataset = dataset.cache('/Data/home/gmi672/val_cache.tmp')
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
     return dataset

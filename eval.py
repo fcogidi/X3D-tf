@@ -8,7 +8,7 @@ from model import X3D
 import utils
 from train import load_model, get_dataset
 
-flags.DEFINE_string('config', None,
+flags.DEFINE_string('cfg', None,
     '(Relative) path to config (.yaml) file.')
 flags.DEFINE_string('file_pattern', None,
     'File pattern of video files to test on.')
@@ -24,11 +24,11 @@ flags.DEFINE_bool('debug', False,
     'Whether to run in debug mode.')
 
 flags.register_multi_flags_validator(
-    ['config', 'val_label_file'],
+    ['cfg', 'val_label_file'],
     lambda flags: '.yaml' in flags['config'],
     message='File extension validation failed',)
 
-flags.mark_flags_as_required(['config', 'model_dir'])
+flags.mark_flags_as_required(['cfg', 'model_dir'])
 
 FLAGS = flags.FLAGS
 
@@ -94,7 +94,7 @@ def main(_):
         epochs=cfg.TRAIN.EPOCHS,
         steps_per_epoch=cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE,
         validation_data=get_dataset(cfg, val_label_file, False) if val_label_file else None,
-        callbacks=[]
+        callbacks=[])
 
 if __name__ == "__main__":
   app.run(main)

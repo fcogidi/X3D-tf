@@ -60,8 +60,7 @@ def load_model(model, cfg):
     raise NotImplementedError(f'{opt_str} not supported')
 
   if FLAGS.mixed_precision:
-    opt = tf.keras.mixed_precision.experimental.LossScaleOptimizer(
-        opt, 'dynamic')
+    opt = tf.keras.mixed_precision.LossScaleOptimizer(opt)
   
   model.compile(
       optimizer=opt,
@@ -113,8 +112,8 @@ def main(_):
   
   # mixed precision
   precision = utils.get_precision(FLAGS.mixed_precision)
-  policy = tf.keras.mixed_precision.experimental.Policy(precision)
-  tf.keras.mixed_precision.experimental.set_policy(policy)
+  policy = tf.keras.mixed_precision.Policy(precision)
+  tf.keras.mixed_precision.set_global_policy(policy)
   
   # learning rate schedule
   def lr_schedule(epoch, lr):
