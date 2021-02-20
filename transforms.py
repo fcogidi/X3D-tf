@@ -26,40 +26,63 @@ class TemporalTransforms:
       tuple (tf.Tensor, tf.Tensor): clip from video, clip label
     """
     size = tf.shape(video)[0]
-    indices = tf.range(size)
+    indices = tf.range(size)      
 
     if self._is_training:
       # randomly select start index from uniform distribution
       start_index = tf.random.uniform([1], 0, size, tf.int32)
-    else:
-      start_index = tf.constant([0])
 
-    # calulate end_index so that the number of frames selected
-    # will be equal to the temporal duration. The formular here
-    # is simply the inverse of one used by tf.strided_slice to
-    # to calculate the size of elements to extract: 
-    # (end-begin)/stride
-    if self._is_training:
+      # calulate end_index so that the number of frames selected
+      # will be equal to the temporal duration. The formular here
+      # is simply the inverse of one used by tf.strided_slice to
+      # to calculate the size of elements to extract: 
+      # (end-begin)/stride
       end_index = start_index + (self._num_frames * self._sample_rate)
+      #end_index = tf.cast(end_index, tf.int32)
+
+      # loop the frames
+      num_loops = TemporalTransforms._get_num_loops(size, end_index)
+      indices = tf.tile(indices, multiples=num_loops)
+
+      # get the indices of frames
+      indices = tf.strided_slice(indices, start_index, end_index, [self._sample_rate])
     else:
-      end_index = start_index + (self._num_frames * self._num_views)
-    end_index = tf.cast(end_index, tf.int32)
+      start_index = tf.constant([0]) # start from the beginning
 
-    # loop the indices to enusre that enough frames are available
-    # to fulfil the temporal_duration
-    num_loops = tf.math.ceil(end_index / size)
-    num_loops = tf.cast(num_loops, tf.int32)
-    indices = tf.tile(indices, multiples=num_loops)
+      end_index = start_index + (self._num_frames * (size//self._num_frames) * self._num_views)
+      #end_index = tf.cast(end_index, tf.int32)
 
-    indices = tf.strided_slice(indices, start_index, end_index,
-      [self._sample_rate] if self._is_training else [1])
+      # loop the frames
+      num_loops = TemporalTransforms._get_num_loops(size, end_index)
+      indices = tf.tile(indices, multiples=num_loops)[0:end_index[0]]
+
+      # get the indices of frames
+      indices = tf.strided_slice(indices, start_index, end_index, [size//self._num_frames])
+    
     clip = tf.gather(video, indices, axis=0)
 
     if not self._is_training:
-      return tf.reshape(clip,
-      [self._num_views, self._num_frames, tf.shape(video)[1], tf.shape(video)[2], tf.shape(video)[3]])
+      return tf.reshape(clip, [self._num_views, self._num_frames,
+        tf.shape(video)[1], tf.shape(video)[2], tf.shape(video)[3]])
+
     return tf.expand_dims(clip, axis=0)
 
+  @staticmethod
+  def _get_num_loops(size, end_index):
+    """
+    Determines the number of times to loop a video to enusre
+      that enough frames are available to fulfil the temporal_duration.
+
+    Args:
+      size (tf.Tensor): number of frames in the video
+      end_index (tf.Tensor): the desired index of the last frame
+
+    Returns:
+      tf.Tensor: the number of times to loop the video
+    """
+    num_loops = tf.math.ceil(end_index / size)
+    return tf.cast(num_loops, tf.int32)
+  
   def __call__(self, video, label):
     clips = self.get_temporal_sample(video)
     return clips, label

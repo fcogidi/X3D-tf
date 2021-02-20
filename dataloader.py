@@ -8,17 +8,17 @@ from transforms import TemporalTransforms, SpatialTransforms
 class InputReader:
   def __init__(self, 
               cfg: CfgNode,
-              flags,
-              is_training: bool):
+              is_training: bool,
+              mixed_precision: bool = False):
     """__init__()
 
     Args:
-        cfg (CfgNode): the model configurations
-        is_training (bool): boolean flag to indicate if
-          reading training dataset
+      cfg (CfgNode): the model configurations
+      is_training (bool): boolean flag to indicate if
+        reading training dataset
     """
     self._cfg = cfg
-    self._flags = flags
+    self._mixed_prec = mixed_precision
     self._is_training = is_training
   
   def decode_video(self, line):
@@ -28,12 +28,12 @@ class InputReader:
     and decode the video.
 
     Args:
-        line (tf.Tensor): a string tensor containing the
-          path to a video file and the label of the video.
+      line (tf.Tensor): a string tensor containing the
+        path to a video file and the label of the video.
 
     Returns:
-        tf.uint8, tf.int32: the decoded video (with all its
-          frames intact), the label of the video
+      tf.uint8, tf.int32: the decoded video (with all its
+        frames intact), the label of the video
     """
     # remove trailing and leading whitespaces
     line = tf.strings.strip(line)
@@ -55,7 +55,7 @@ class InputReader:
       video = vr.get_batch(range(num_frames))
     except Exception as e:
       tf.compat.v1.logging.warn(
-        f'\nFailed to decode video at {path}. Replacing with zeros...')
+        f'\nFailed to decode video {path}. Replacing with zeros...')
       video = tf.zeros([100, 240, 144, 3], tf.uint8)
 
     return video, label
@@ -82,7 +82,7 @@ class InputReader:
           self._cfg.DATA.NUM_INPUT_CHANNELS
       ))
 
-    if self._flags.mixed_precision:
+    if self._mixed_prec:
       dtype = tf.keras.mixed_precision.experimental.global_policy().compute_dtype
       videos = tf.cast(videos, dtype)
     return videos, label
@@ -93,7 +93,6 @@ class InputReader:
     options = tf.data.Options()
     options.experimental_optimization.map_vectorization.enabled = True
     options.experimental_optimization.map_parallelization = True
-    options.experimental_threading.max_intra_op_parallelism = 1
     options.experimental_deterministic = not self._is_training
     options.experimental_optimization.parallel_batch = True
     return options

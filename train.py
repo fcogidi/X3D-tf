@@ -9,6 +9,8 @@ from model import X3D
 import dataloader
 import utils
 
+os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
+
 flags.DEFINE_string('config', None,
     '(Relative) path to config (.yaml) file.')
 flags.DEFINE_string('train_label_file', None,
@@ -37,15 +39,15 @@ flags.mark_flags_as_required(['config', 'train_label_file', 'model_dir'])
 
 FLAGS = flags.FLAGS
 
-def get_dataset(cfg, label_path, is_training):
+def get_dataset(cfg, label_path, is_training, mixed_precision=False):
   """Returns a tf.data dataset"""
   return dataloader.InputReader(
       cfg,
-      FLAGS,
-      is_training
+      is_training,
+      mixed_precision,
   )(label_path, cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
 
-def load_model(model, cfg):
+def load_model(model, cfg, mixed_precision=False):
   """Compile model with loss function, model optimizers and metrics."""
   opt_str = cfg.TRAIN.OPTIMIZER.lower()
   if opt_str == 'sgd':
@@ -59,7 +61,7 @@ def load_model(model, cfg):
   else:
     raise NotImplementedError(f'{opt_str} not supported')
 
-  if FLAGS.mixed_precision:
+  if mixed_precision:
     opt = tf.keras.mixed_precision.LossScaleOptimizer(opt)
   
   model.compile(
@@ -131,7 +133,7 @@ def main(_):
 
   with strategy.scope():
     model = X3D(cfg)
-    model = load_model(model, cfg)
+    model = load_model(model, cfg, FLAGS.mixed_precision)
 
     # resume training from checkpoint, if available
     current_epoch = 0
@@ -148,12 +150,13 @@ def main(_):
         model.load_weights(FLAGS.pretrained_ckpt)
 
     model.fit(
-        get_dataset(cfg, FLAGS.train_label_file, True),
+        get_dataset(cfg, FLAGS.train_label_file, True, FLAGS.mixed_precision),
         verbose=1,
         epochs=cfg.TRAIN.EPOCHS,
         initial_epoch = current_epoch,
         steps_per_epoch=cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE,
-        validation_data=get_dataset(cfg, val_label_file, False) if val_label_file else None,
+        validation_data=get_dataset(cfg, val_label_file, False,
+          FLAGS.mixed_precision) if val_label_file else None,
         callbacks=utils.get_callbacks(
             cfg, lr_schedule, FLAGS))
 
