@@ -4,6 +4,7 @@ from yacs.config import CfgNode
 from decord import VideoReader, bridge, cpu
 
 from transforms import TemporalTransforms, SpatialTransforms
+import utils
 
 class InputReader:
   def __init__(self, 
@@ -59,6 +60,24 @@ class InputReader:
       video = tf.zeros([100, 240, 144, 3], tf.uint8)
 
     return video, label
+
+  def parse_and_decode(self, serialized_example):
+    sequence_features = {
+        'video': tf.io.FixedLenSequenceFeature([], dtype=tf.string)}
+
+    context_features = {
+        'video/num_frames': tf.io.FixedLenFeature([], tf.int64, -1),
+        'video/class/label': tf.io.FixedLenFeature([], tf.int64, -1)}
+
+    context, sequence = tf.io.parse_single_sequence_example(
+        serialized_example, context_features, sequence_features)
+
+    indices = tf.range(0, context['video/num_frames'])
+    video = tf.map_fn(lambda i: tf.image.decode_jpeg(sequence['video'][i]),
+            indices, fn_output_signature=tf.uint8)
+    label = context['video/class/label']
+    
+    return video, label
   
   @tf.function
   def process_batch(self, videos, label,  batch_size):
@@ -97,7 +116,7 @@ class InputReader:
     options.experimental_optimization.parallel_batch = True
     return options
 
-  def __call__(self, label_path, batch_size=None):
+  def __call__(self, file_pattern, batch_size=None):
     """Loads, transforms and batches data"""
     temporal_transform = TemporalTransforms(
         sample_rate=self._cfg.DATA.FRAME_RATE,
@@ -113,20 +132,26 @@ class InputReader:
         num_crops=self._cfg.TEST.NUM_SPATIAL_CROPS,
         random_hflip=self._is_training)
 
-    dataset = tf.data.TextLineDataset(label_path).cache()
+    #dataset = tf.data.TextLineDataset(label_path).cache()
+    dataset = tf.data.Dataset.list_files(file_pattern, shuffle=True)
+    dataset = dataset.interleave(lambda filename: tf.data.TFRecordDataset(
+        filename,
+        compression_type='GZIP',
+        num_parallel_reads=tf.data.experimental.AUTOTUNE).prefetch(1),
+      num_parallel_calls=tf.data.experimental.AUTOTUNE)
       
     if self._is_training:
-      dataset = dataset.shuffle(self._cfg.TRAIN.DATASET_SIZE,
-        reshuffle_each_iteration=True).repeat()
+      dataset = dataset.shuffle(batch_size, reshuffle_each_iteration=True).repeat()
 
     dataset = dataset.with_options(self.dataset_options)
 
-    dataset = dataset.map(
+    '''dataset = dataset.map(
         lambda x: tf.py_function(self.decode_video, [x], [tf.uint8, tf.int32]),
-        num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        num_parallel_calls=tf.data.experimental.AUTOTUNE)'''
+    dataset = dataset.map(lambda value: self.parse_and_decode(value),
+      num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-    dataset = dataset.map(
-        lambda *args: temporal_transform(*args),
+    dataset = dataset.map(lambda *args: temporal_transform(*args),
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.map(

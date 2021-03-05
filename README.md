@@ -45,7 +45,7 @@ This implementation achieves the following performance on the video classificati
 
 | Model name         | Top 1 Accuracy  | Top 5 Accuracy |  Test  |
 | ------------------ |---------------- | -------------- |  ----  |
-| X3D-XS             |     TODO        |      TODO      |  TODO  |
+| X3D-XS             |    48.66        |     72.26      |  TODO  |
 | X3D-S              |     TODO        |      TODO      |  TODO  |
 | X3D-M              |     TODO        |      TODO      |  TODO  |
 | X3D-L              |     TODO        |      TODO      |  TODO  |

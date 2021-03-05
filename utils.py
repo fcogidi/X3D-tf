@@ -3,7 +3,7 @@ import math
 import tensorflow as tf
 from absl import logging
 from wandb.keras import WandbCallback
-
+    
 def round_width(width, multiplier, min_depth=8, divisor=8):
   """
   Round width of filters based on width multiplier
@@ -112,10 +112,8 @@ def get_callbacks(cfg, lr_schedule, flags):
   lr = tf.keras.callbacks.LearningRateScheduler(lr_schedule, 1),
   tb = tf.keras.callbacks.TensorBoard(
       log_dir=flags.model_dir,
-      profile_batch=2, #flags.debug
-      write_images=True,
+      profile_batch=32, #flags.debug
       write_graph=True,
-      histogram_freq=10,
       update_freq=flags.save_checkpoints_step or 'epoch'
   )
   ckpt = tf.keras.callbacks.ModelCheckpoint(

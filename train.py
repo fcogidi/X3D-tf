@@ -9,13 +9,11 @@ from model import X3D
 import dataloader
 import utils
 
-os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
-
 flags.DEFINE_string('config', None,
     '(Relative) path to config (.yaml) file.')
-flags.DEFINE_string('train_label_file', None,
+flags.DEFINE_string('train_file_pattern', None,
     'Path to .txt file containing paths to video and integer label for training dataset.')
-flags.DEFINE_string('val_label_file', None,
+flags.DEFINE_string('val_file_pattern', None,
     'Path to .txt file containing paths to video and integer label for validation dataset.')
 flags.DEFINE_string('model_dir', None,
     'Path to directory where model info, like checkpoints are (to be) stored.')
@@ -31,21 +29,21 @@ flags.DEFINE_bool('debug', False,
     'Whether to run in debug mode.')
 
 flags.register_multi_flags_validator(
-    ['config', 'train_label_file', 'val_label_file'],
-    lambda flags: '.yaml' in flags['config'] and '.txt' in flags['train_label_file'],
+    ['config', 'train_file_pattern', 'val_file_pattern'],
+    lambda flags: '.yaml' in flags['config'],
     message='File extension validation failed',)
 
-flags.mark_flags_as_required(['config', 'train_label_file', 'model_dir'])
+flags.mark_flags_as_required(['config', 'train_file_pattern', 'model_dir'])
 
 FLAGS = flags.FLAGS
 
-def get_dataset(cfg, label_path, is_training, mixed_precision=False):
+def get_dataset(cfg, file_pattern, is_training, mixed_precision=False):
   """Returns a tf.data dataset"""
   return dataloader.InputReader(
       cfg,
       is_training,
       mixed_precision,
-  )(label_path, cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
+  )(file_pattern, cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
 
 def load_model(model, cfg, mixed_precision=False):
   """Compile model with loss function, model optimizers and metrics."""
@@ -84,13 +82,10 @@ def main(_):
   if not tf.io.gfile.exists(model_dir):
     tf.io.gfile.makedirs(model_dir)
 
-  val_label_file = FLAGS.val_label_file
-  if val_label_file is not None:
-    assert '.txt' in val_label_file, 'File extension validation failed'
-
   # init wandb
   if cfg.WANDB.ENABLE:
     wandb.tensorboard.patch(root_logdir=model_dir)
+    run_id = wandb.util.generate_id()
     wandb.init(
         job_type='train',
         group=cfg.WANDB.GROUP_NAME,
@@ -98,7 +93,8 @@ def main(_):
         sync_tensorboard=cfg.WANDB.TENSORBOARD,
         mode=cfg.WANDB.MODE,
         config=dict(cfg),
-        resume='auto'
+        resume='allow',
+        id=run_id
     )
 
   if FLAGS.debug:
@@ -150,13 +146,13 @@ def main(_):
         model.load_weights(FLAGS.pretrained_ckpt)
 
     model.fit(
-        get_dataset(cfg, FLAGS.train_label_file, True, FLAGS.mixed_precision),
+        get_dataset(cfg, FLAGS.train_file_pattern, True, FLAGS.mixed_precision),
         verbose=1,
         epochs=cfg.TRAIN.EPOCHS,
         initial_epoch = current_epoch,
         steps_per_epoch=cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE,
-        validation_data=get_dataset(cfg, val_label_file, False,
-          FLAGS.mixed_precision) if val_label_file else None,
+        validation_data=get_dataset(cfg, FLAGS.train_file_pattern, False,
+          FLAGS.mixed_precision) if FLAGS.train_file_pattern else None,
         callbacks=utils.get_callbacks(
             cfg, lr_schedule, FLAGS))
 

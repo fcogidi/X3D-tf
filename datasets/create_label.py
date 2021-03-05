@@ -1,6 +1,9 @@
 import os
 import json
+import glob
 from absl import app, flags, logging
+
+SUPPORTED_FILETYPES = {'.mp4', '.avi', '.mkv', '.webm', '.mov'}
 
 flags.DEFINE_string('data_dir', None,
                     'Name of directory containing data files.')
@@ -12,6 +15,8 @@ flags.DEFINE_integer('sample_size', None,
                     'Number of samples to include from each category.')
 flags.DEFINE_string('test_json_file', None,
                     'Path to JSON file containing Kinetics-400 test labels')
+flags.DEFINE_list('file_extensions', list(SUPPORTED_FILETYPES),
+                  'List of video formats to search for and decode.')
 
 flags.mark_flags_as_required(['data_dir', 'path_to_label_map', 'output_path'])
 
@@ -33,46 +38,41 @@ def main(_):
   test_file = FLAGS.test_json_file
   if test_file is not None and '.json' not in test_file:
     raise ValueError('Please provide valid path to JSON test file.')
+
+  if test_file:
+    with open(test_file, 'r') as j:
+        annotations = json.load(j)
+  else:
+    annotations = None
   
   with open(label_path, 'r') as f:
     label_map = json.load(f)
 
+  # get files
+  file_paths = []
+  for ext in FLAGS.file_extensions:
+    if ext in SUPPORTED_FILETYPES:
+      file_paths.extend(glob.glob(os.path.join(data_dir, '**', '*' + ext),
+        recursive=True))
+    else:
+      logging.info(f'{ext} format not supported. Skipping...')
+
   # open output file
   with open(out_path, 'w') as writer:
-    if test_file is not None:
-      with open(test_file, 'r') as j:
-        test_anns = json.load(j)
-
-      for filename in os.listdir(data_dir):
-        if filename.endswith(".mp4") or filename.endswith(".mkv"):
-          try:
-            filepath = os.path.join(data_dir, filename)
-
-            # remove the extension
-            video_key = filename.split('.')[0]
-
-            # get the label string to which the video belongs
-            label_str = test_anns[video_key]['annotations']['label']
-            label_Str = label_str.replace(' ', '_') # replace space with underscore
-
-            label = label_map[label_str] # get the integer label for the video
-            writer.write('{} {}\n'.format(filepath, label))
-          except KeyError:
-            logging.warn(f'{filename} not found')
-    else:
-      # walk the top-level folders
-      for dirpath, sub_dirs, _ in os.walk(data_dir):
-        for sub_dir in sub_dirs:
-          # get the path of each sub-directory
-          index = label_map[sub_dir]
-          sub_dirpath = os.path.join(dirpath, sub_dir)
-          for path, _, files in os.walk(sub_dirpath):
-            count = 0
-            for file in files:
-              if FLAGS.sample_size is None or count < FLAGS.sample_size:
-                filepath = os.path.join(path, file)
-                writer.write('{} {}\n'.format(filepath, index))
-              count += 1
+    for file_path in file_paths:
+      filename = os.path.basename(file_path).split('.')[0]
+      if annotations:
+        try:
+          class_label = annotations[filename]['annotations']['label']
+          class_label = class_label.replace(' ', '_') # replace space with underscore
+          class_id = label_map[class_label] # get the integer label for the video
+        except KeyError:
+          logging.info(f'{filename} not found! Skipping...')
+          continue
+      else:
+        class_label = os.path.basename(os.path.dirname(file_path))
+        class_id = label_map[class_label]
+      writer.write('{} {}\n'.format(file_path, class_id))
 
 if __name__ == "__main__":
   app.run(main)

@@ -3,9 +3,9 @@ from utils import normalize
 
 class TemporalTransforms:
   def __init__(self,
+              is_training: bool,
               sample_rate: int,
               num_frames: int,
-              is_training: bool,
               num_views: int=1):
     self._sample_rate = sample_rate
     self._is_training = is_training
@@ -38,7 +38,6 @@ class TemporalTransforms:
       # to calculate the size of elements to extract: 
       # (end-begin)/stride
       end_index = start_index + (self._num_frames * self._sample_rate)
-      #end_index = tf.cast(end_index, tf.int32)
 
       # loop the frames
       num_loops = TemporalTransforms._get_num_loops(size, end_index)
@@ -48,16 +47,16 @@ class TemporalTransforms:
       indices = tf.strided_slice(indices, start_index, end_index, [self._sample_rate])
     else:
       start_index = tf.constant([0]) # start from the beginning
+      sample_rate = tf.maximum(1, size//self._num_frames)
 
-      end_index = start_index + (self._num_frames * (size//self._num_frames) * self._num_views)
-      #end_index = tf.cast(end_index, tf.int32)
+      end_index = start_index + (self._num_frames * sample_rate * self._num_views)
 
       # loop the frames
       num_loops = TemporalTransforms._get_num_loops(size, end_index)
       indices = tf.tile(indices, multiples=num_loops)[0:end_index[0]]
 
       # get the indices of frames
-      indices = tf.strided_slice(indices, start_index, end_index, [size//self._num_frames])
+      indices = tf.strided_slice(indices, start_index, end_index, [sample_rate])
     
     clip = tf.gather(video, indices, axis=0)
 
@@ -225,7 +224,7 @@ class SpatialTransforms:
               self._crop_size,
               i%3 if self._num_crops > 1 else 1) # LeftCenterRight vs Center crop
           for i in range(self._num_crops)]
-      frames = tf.convert_to_tensor(frames)
+      #frames = tf.convert_to_tensor(frames)
 
     # normalize pixel values
     frames = normalize(frames, per_channel_mean, per_channel_std)
