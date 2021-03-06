@@ -63,6 +63,14 @@ class InputReader:
     return video, label
 
   def parse_and_decode(self, serialized_example):
+    """[summary]
+
+    Args:
+        serialized_example ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
     sequence_features = {
         'video': tf.io.FixedLenSequenceFeature([], dtype=tf.string)}
 
@@ -132,7 +140,6 @@ class InputReader:
         is_training=self._is_training,
         num_crops=self._cfg.TEST.NUM_SPATIAL_CROPS,
         random_hflip=self._is_training)
-    print(self._use_tfrecord)
 
     if self._use_tfrecord:
       dataset = tf.data.Dataset.list_files(file_pattern, shuffle=True)
