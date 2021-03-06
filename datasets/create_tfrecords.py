@@ -103,6 +103,7 @@ def write_tfrecord(paths, label_map, annotations, process_id, num_shards):
 
   with tf.io.TFRecordWriter(tfr_path, tfr_options) as writer:
     for path in paths:
+      logging.debug(f'writing {path}')
       filename = os.path.basename(path).split('.')[0]
 
       # get class label (string) and class id (integer)
@@ -114,7 +115,6 @@ def write_tfrecord(paths, label_map, annotations, process_id, num_shards):
         except KeyError:
           logging.info(f'{filename} not found! Skipping...')
           continue
-
       else: # training or validation set
         class_label = os.path.basename(os.path.dirname(path))
         class_id = label_map[class_label]
@@ -183,6 +183,7 @@ def main(_):
         recursive=True))
     else:
       logging.info(f'{ext} format not supported. Skipping...')
+  np.random.shuffle(files)
 
   returns = []
   process_id = 0

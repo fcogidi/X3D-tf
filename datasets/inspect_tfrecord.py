@@ -6,9 +6,11 @@ import time
 import json
 import random
 import imageio
+import numpy as np
 import tensorflow as tf
 from absl import app, flags
 
+import utils
 import dataloader
 from configs.default import get_default_config
 
@@ -38,24 +40,32 @@ def main(_):
     id_to_text = {id:text for text, id in text_to_id.items()}
 
   assert FLAGS.file_pattern is not None, 'Please provide a file pattern for tfrecord files.'
-  loader = dataloader.InputReader(cfg, FLAGS.eval, True)
-  dataset = loader(FLAGS.file_pattern, FLAGS.num_samples)
+  loader = dataloader.InputReader(cfg, not FLAGS.eval, True)
+  dataset = loader(FLAGS.file_pattern)
 
   tik = time.time()
-  dataset = dataset.take(1)
+  dataset = list(dataset.take(FLAGS.num_samples).as_numpy_iterator())
   print(f'Reading {FLAGS.num_samples} files took {time.time() - tik}s')
 
+  views = cfg.TEST.NUM_TEMPORAL_VIEWS * cfg.TEST.NUM_SPATIAL_CROPS
+
   tik = time.time()
-  for elem in list(dataset.as_numpy_iterator()):
-    frames = elem[0]
-    label = id_to_text[elem[1]]
-    file_index = random.randint(100, 1000)
+  for example in dataset:
+    if FLAGS.eval:
+      shapes = example[0].shape
+      frames = np.reshape(example[0],
+                (shapes[0] * shapes[1] * shapes[2], shapes[3], shapes[4], shapes[5]))
+    else:
+      frames = np.squeeze(example[0])
+    label = id_to_text[example[1]]
+    file_index = random.randint(100, 10000)
     with imageio.get_writer(f'{label}_{file_index}.mp4', fps=25) as writer:
       # NOTE for kinetics dataset: the frame rate used to write the
       # video may not correspond to the original video frame rate.
       # This can be rectified by including the average fps in the tfrecord file.
+      frames = utils.denormalize(frames, cfg.DATA.MEAN, cfg.DATA.STD)
       for frame in frames:
-        writer.append(frame)
+        writer.append_data(frame.numpy())
   print(f'Writing {FLAGS.num_samples} files took {time.time() - tik}s')
 
 if __name__ == "__main__":

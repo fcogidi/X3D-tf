@@ -20,13 +20,13 @@ pip install -r requirements.txt
 #### Option 1 (recommended): Write video files to TFRecord format
 
 ```create tfrecord
-PYTHONPATH=".:$PYTHONPATH" python datasets/create_tfrecords.py --set <train, val or test> --video_dir path_to_your_data_folder --label_map datasets/kinetics400/label_map.json --output_dir tfrecords/rec --files_per_record 32
+PYTHONPATH=".:$PYTHONPATH" python datasets/create_tfrecords.py --set=<train, val or test> --video_dir=path_to_your_data_folder --label_map=datasets/kinetics400/label_map.json --output_dir=tfrecords/rec --files_per_record=32
 ```
 
 #### Option 2: Generate a text file of video paths and label
 
 ```create label
-PYTHONPATH=".:$PYTHONPATH" python datasets/create_label.py --data_dir path_to_your_data_folder --path_to_label_map datasets/kinetics400/label_map.json --output_path datasets/kinetics400/train.txt
+PYTHONPATH=".:$PYTHONPATH" python datasets/create_label.py --data_dir=path_to_your_data_folder --path_to_label_map=datasets/kinetics400/label_map.json --output_path=datasets/kinetics400/train.txt
 ```
 
 ### Training
@@ -34,7 +34,7 @@ PYTHONPATH=".:$PYTHONPATH" python datasets/create_label.py --data_dir path_to_yo
 To train the model(s) in the paper, run this command:
 
 ```train
-python train.py --train_file_pattern tfrecords/rec-train* --val_file_pattern tfrecords/rec-val* --model_dir path_to_your_model_folder --config configs/kinetics/X3D_XS.yaml --num_gpus 1 --use_tfrecords
+python train.py --train_file_pattern=tfrecords/rec-train* --val_file_pattern=tfrecords/rec-val* --model_dir=path_to_your_model_folder --config=configs/kinetics/X3D_XS.yaml --num_gpus=1 --use_tfrecords
 ```
 
 To view all available options and their descriptions, run:
@@ -48,7 +48,7 @@ python train.py --help
 To evaluate a model, run:
 
 ```eval
-python eval.py --model_folder path_to_your_model_folder --cfg configs/kinetics/X3D-XS/ --test_label_file datasets/kinetics400/test.json --gpus 1
+python eval.py --model_folder=path_to_your_model_folder --cfg=configs/kinetics/X3D-XS/ --test_label_file=datasets/kinetics400/test.json --gpus=1
 ```
 
 ## Results

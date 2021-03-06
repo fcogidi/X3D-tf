@@ -1,4 +1,5 @@
 import os
+import glob
 import tensorflow as tf
 from yacs.config import CfgNode
 from decord import VideoReader, bridge, cpu
@@ -147,9 +148,11 @@ class InputReader:
         filename,
         compression_type='GZIP',
         num_parallel_reads=tf.data.experimental.AUTOTUNE).prefetch(1),
+      deterministic=False,
       num_parallel_calls=tf.data.experimental.AUTOTUNE)
       if self._is_training:
-        dataset = dataset.shuffle(batch_size*16, reshuffle_each_iteration=True).repeat()
+        dataset = dataset.shuffle(batch_size*16 if batch_size else 1024,
+          reshuffle_each_iteration=True).repeat()
     else:
       dataset = tf.data.TextLineDataset(file_pattern).cache()
       if self._is_training:
