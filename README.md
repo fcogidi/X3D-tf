@@ -12,16 +12,23 @@ These networks are reported to achieve high accuracy on video recognition tasks,
 ```setup
 pip install -r requirements.txt
 ```
+
 ## Usage
+
 ### Data Preparation
-**Option 1 (recommended): Write video files to TFRecord format**
+
+#### Option 1 (recommended): Write video files to TFRecord format
+
 ```create tfrecord
 PYTHONPATH=".:$PYTHONPATH" python datasets/create_tfrecords.py --set <train, val or test> --video_dir path_to_your_data_folder --label_map datasets/kinetics400/label_map.json --output_dir tfrecords/rec --files_per_record 32
 ```
-**Option 2: Generate a text file of video paths and label**
+
+#### Option 2: Generate a text file of video paths and label
+
 ```create label
 PYTHONPATH=".:$PYTHONPATH" python datasets/create_label.py --data_dir path_to_your_data_folder --path_to_label_map datasets/kinetics400/label_map.json --output_path datasets/kinetics400/train.txt
 ```
+
 ### Training
 
 To train the model(s) in the paper, run this command:
