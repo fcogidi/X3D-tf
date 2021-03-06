@@ -119,7 +119,7 @@ def get_callbacks(cfg, lr_schedule, flags):
   ckpt = tf.keras.callbacks.ModelCheckpoint(
       os.path.join(flags.model_dir, 'ckpt-{epoch:d}'),
       verbose=1,
-      monitor='val_acc',
+      monitor='val_acc' if flags.val_file_pattern else 'loss',
       save_freq=flags.save_checkpoints_step or 'epoch',
   )
   callbacks.extend([lr, tb, ckpt])

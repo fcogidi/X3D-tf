@@ -10,53 +10,21 @@ import utils
 
 flags.DEFINE_string('cfg', None,
     '(Relative) path to config (.yaml) file.')
-flags.DEFINE_string('test_label_file', None,
+flags.DEFINE_string('test_file_pattern', None,
     'Path to .txt file containing paths to video and integer label for test dataset.')
 flags.DEFINE_string('model_folder', None,
     'Path to directory where checkpoint(s) are stored.')
 flags.DEFINE_integer('gpus', 1,
     'Number of gpus to use for training.', lower_bound=0)
-'''flags.DEFINE_bool('debug', False,
-    'Whether to run in debug mode.')'''
+flags.DEFINE_bool('tfrecord', True,
+    'Whether data should be loaded from tfrecord files.')
 
-flags.register_multi_flags_validator(
-    ['cfg', 'test_label_file'],
-    lambda flags: '.yaml' in flags['cfg'] and '.txt' in flags['test_label_file'],
-    message='File extension validation failed',)
-
-flags.mark_flags_as_required(['cfg', 'test_label_file', 'model_folder'])
+flags.mark_flags_as_required(['cfg', 'test_file_pattern', 'model_folder'])
 
 FLAGS = flags.FLAGS
 
-def load_model(model, cfg, mixed_precision=False):
-  """Compile model with loss function, model optimizers and metrics."""
-  opt_str = cfg.TRAIN.OPTIMIZER.lower()
-  if opt_str == 'sgd':
-    opt = tf.optimizers.SGD(
-        learning_rate=cfg.TRAIN.WARMUP_LR,
-        momentum=cfg.TRAIN.MOMENTUM,
-        nesterov=True)
-  elif opt_str == 'adam':
-    opt = tf.optimizers.Adam(
-        learning_rate=cfg.TRAIN.WARMUP_LR)
-  else:
-    raise NotImplementedError(f'{opt_str} not supported')
-
-  if mixed_precision:
-    opt = tf.keras.mixed_precision.LossScaleOptimizer(opt)
-  
-  model.compile(
-      optimizer=opt,
-      loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-      metrics=[
-          tf.keras.metrics.SparseCategoricalAccuracy(name='acc'),
-          tf.keras.metrics.SparseTopKCategoricalAccuracy(
-              k=5,
-              name='top_5_acc')])
-
-  return model
-
 def main(_):
+  assert '.yaml' in FLAGS.cfg, 'Please provide path to yaml file'
   cfg = get_default_config()
   cfg.merge_from_file(FLAGS.cfg)
   cfg.freeze()
@@ -76,6 +44,31 @@ def main(_):
         config=dict(cfg)
     )
 
+  def load_model(model, cfg):
+    """Compile model with loss function, model optimizers and metrics."""
+    opt_str = cfg.TRAIN.OPTIMIZER.lower()
+    if opt_str == 'sgd':
+      opt = tf.optimizers.SGD(
+          learning_rate=cfg.TRAIN.WARMUP_LR,
+          momentum=cfg.TRAIN.MOMENTUM,
+          nesterov=True)
+    elif opt_str == 'adam':
+      opt = tf.optimizers.Adam(
+          learning_rate=cfg.TRAIN.WARMUP_LR)
+    else:
+      raise NotImplementedError(f'{opt_str} not supported')
+    
+    model.compile(
+        optimizer=opt,
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+        metrics=[
+            tf.keras.metrics.SparseCategoricalAccuracy(name='acc'),
+            tf.keras.metrics.SparseTopKCategoricalAccuracy(
+                k=5,
+                name='top_5_acc')])
+
+    return model
+
   strategy = utils.get_strategy(FLAGS.gpus)
 
   with strategy.scope():
@@ -89,12 +82,12 @@ def main(_):
       model.load_weights(ckpt_path).expect_partial()
 
       model.evaluate(
-        InputReader(cfg, False
-        )(FLAGS.test_label_file, cfg.TEST.BATCH_SIZE),
+        InputReader(cfg, False, FLAGS.tfrecord,
+        )(FLAGS.test_file_pattern, cfg.TEST.BATCH_SIZE),
         verbose=1,
         callbacks=[tf.keras.callbacks.TensorBoard(
           log_dir=model_dir,
-          profile_batch=0)])
+          profile_batch=2)])
 
 if __name__ == "__main__":
   app.run(main)

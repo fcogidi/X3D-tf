@@ -7,9 +7,9 @@ from transforms import TemporalTransforms, SpatialTransforms
 import utils
 
 class InputReader:
-  def __init__(self, 
-              cfg: CfgNode,
+  def __init__(self, cfg: CfgNode,
               is_training: bool,
+              use_tfrecord: bool,
               mixed_precision: bool = False):
     """__init__()
 
@@ -21,6 +21,7 @@ class InputReader:
     self._cfg = cfg
     self._mixed_prec = mixed_precision
     self._is_training = is_training
+    self._use_tfrecord = use_tfrecord
   
   def decode_video(self, line):
     """
@@ -131,25 +132,32 @@ class InputReader:
         is_training=self._is_training,
         num_crops=self._cfg.TEST.NUM_SPATIAL_CROPS,
         random_hflip=self._is_training)
+    print(self._use_tfrecord)
 
-    #dataset = tf.data.TextLineDataset(label_path).cache()
-    dataset = tf.data.Dataset.list_files(file_pattern, shuffle=True)
-    dataset = dataset.interleave(lambda filename: tf.data.TFRecordDataset(
+    if self._use_tfrecord:
+      dataset = tf.data.Dataset.list_files(file_pattern, shuffle=True)
+      dataset = dataset.interleave(lambda filename: tf.data.TFRecordDataset(
         filename,
         compression_type='GZIP',
         num_parallel_reads=tf.data.experimental.AUTOTUNE).prefetch(1),
       num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
-    if self._is_training:
-      dataset = dataset.shuffle(batch_size*16, reshuffle_each_iteration=True).repeat()
+      if self._is_training:
+        dataset = dataset.shuffle(batch_size*16, reshuffle_each_iteration=True).repeat()
+    else:
+      dataset = tf.data.TextLineDataset(file_pattern).cache()
+      if self._is_training:
+        dataset = dataset.shuffle(self._cfg.TRAIN.DATASET_SIZE,
+          reshuffle_each_iteration=True).repeat()
 
     dataset = dataset.with_options(self.dataset_options)
 
-    '''dataset = dataset.map(
-        lambda x: tf.py_function(self.decode_video, [x], [tf.uint8, tf.int32]),
-        num_parallel_calls=tf.data.experimental.AUTOTUNE)'''
-    dataset = dataset.map(lambda value: self.parse_and_decode(value),
+    if self._use_tfrecord:
+      dataset = dataset.map(lambda value: self.parse_and_decode(value),
       num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    else:
+      dataset = dataset.map(
+          lambda x: tf.py_function(self.decode_video, [x], [tf.uint8, tf.int32]),
+          num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     dataset = dataset.map(lambda *args: temporal_transform(*args),
         num_parallel_calls=tf.data.experimental.AUTOTUNE)

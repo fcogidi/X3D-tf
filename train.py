@@ -25,55 +25,17 @@ flags.DEFINE_integer('save_checkpoints_step', None,
     'Number of training steps to save checkpoints.', lower_bound=0)
 flags.DEFINE_bool('mixed_precision', False,
     'Whether to use mixed precision during training.')
+flags.DEFINE_bool('use_tfrecord', False,
+    'Whether data should be loaded from tfrecord files.')
 flags.DEFINE_bool('debug', False,
     'Whether to run in debug mode.')
-
-flags.register_multi_flags_validator(
-    ['config', 'train_file_pattern', 'val_file_pattern'],
-    lambda flags: '.yaml' in flags['config'],
-    message='File extension validation failed',)
 
 flags.mark_flags_as_required(['config', 'train_file_pattern', 'model_dir'])
 
 FLAGS = flags.FLAGS
 
-def get_dataset(cfg, file_pattern, is_training, mixed_precision=False):
-  """Returns a tf.data dataset"""
-  return dataloader.InputReader(
-      cfg,
-      is_training,
-      mixed_precision,
-  )(file_pattern, cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
-
-def load_model(model, cfg, mixed_precision=False):
-  """Compile model with loss function, model optimizers and metrics."""
-  opt_str = cfg.TRAIN.OPTIMIZER.lower()
-  if opt_str == 'sgd':
-    opt = tf.optimizers.SGD(
-        learning_rate=cfg.TRAIN.WARMUP_LR,
-        momentum=cfg.TRAIN.MOMENTUM,
-        nesterov=True)
-  elif opt_str == 'adam':
-    opt = tf.optimizers.Adam(
-        learning_rate=cfg.TRAIN.WARMUP_LR)
-  else:
-    raise NotImplementedError(f'{opt_str} not supported')
-
-  if mixed_precision:
-    opt = tf.keras.mixed_precision.LossScaleOptimizer(opt)
-  
-  model.compile(
-      optimizer=opt,
-      loss=tf.keras.losses.SparseCategoricalCrossentropy(),
-      metrics=[
-          tf.keras.metrics.SparseCategoricalAccuracy(name='acc'),
-          tf.keras.metrics.SparseTopKCategoricalAccuracy(
-              k=5,
-              name='top_5_acc')])
-
-  return model
-
 def main(_):
+  assert '.yaml' in FLAGS.config, 'Please provide path to yaml file.'
   cfg = get_default_config()
   cfg.merge_from_file(FLAGS.config)
   cfg.freeze()
@@ -112,6 +74,43 @@ def main(_):
   precision = utils.get_precision(FLAGS.mixed_precision)
   policy = tf.keras.mixed_precision.Policy(precision)
   tf.keras.mixed_precision.set_global_policy(policy)
+
+  def get_dataset(cfg, file_pattern, is_training):
+    """Returns a tf.data dataset"""
+    return dataloader.InputReader(
+        cfg,
+        is_training,
+        FLAGS.use_tfrecord,
+        FLAGS.mixed_precision
+    )(file_pattern, cfg.TRAIN.BATCH_SIZE if is_training else cfg.TEST.BATCH_SIZE)
+
+  def load_model(model, cfg):
+    """Compile model with loss function, model optimizers and metrics."""
+    opt_str = cfg.TRAIN.OPTIMIZER.lower()
+    if opt_str == 'sgd':
+      opt = tf.optimizers.SGD(
+          learning_rate=cfg.TRAIN.WARMUP_LR,
+          momentum=cfg.TRAIN.MOMENTUM,
+          nesterov=True)
+    elif opt_str == 'adam':
+      opt = tf.optimizers.Adam(
+          learning_rate=cfg.TRAIN.WARMUP_LR)
+    else:
+      raise NotImplementedError(f'{opt_str} not supported')
+
+    if FLAGS.mixed_precision:
+      opt = tf.keras.mixed_precision.LossScaleOptimizer(opt)
+    
+    model.compile(
+        optimizer=opt,
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+        metrics=[
+            tf.keras.metrics.SparseCategoricalAccuracy(name='acc'),
+            tf.keras.metrics.SparseTopKCategoricalAccuracy(
+                k=5,
+                name='top_5_acc')])
+
+    return model
   
   # learning rate schedule
   def lr_schedule(epoch, lr):
@@ -129,7 +128,7 @@ def main(_):
 
   with strategy.scope():
     model = X3D(cfg)
-    model = load_model(model, cfg, FLAGS.mixed_precision)
+    model = load_model(model, cfg)
 
     # resume training from checkpoint, if available
     current_epoch = 0
@@ -146,15 +145,13 @@ def main(_):
         model.load_weights(FLAGS.pretrained_ckpt)
 
     model.fit(
-        get_dataset(cfg, FLAGS.train_file_pattern, True, FLAGS.mixed_precision),
+        get_dataset(cfg, FLAGS.train_file_pattern, True),
         verbose=1,
         epochs=cfg.TRAIN.EPOCHS,
         initial_epoch = current_epoch,
         steps_per_epoch=cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE,
-        validation_data=get_dataset(cfg, FLAGS.val_file_pattern, False,
-          FLAGS.mixed_precision) if FLAGS.val_file_pattern else None,
-        callbacks=utils.get_callbacks(
-            cfg, lr_schedule, FLAGS))
+        validation_data=get_dataset(cfg, FLAGS.val_file_pattern, False) if FLAGS.val_file_pattern else None,
+        callbacks=utils.get_callbacks(cfg, lr_schedule, FLAGS))
 
 if __name__ == "__main__":
   app.run(main)

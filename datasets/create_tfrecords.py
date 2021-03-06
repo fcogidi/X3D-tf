@@ -146,7 +146,7 @@ def main(_):
   returns = []
   process_id = 0
   num_files = len(files)
-  num_workers = multiprocessing.cpu_count()
+  num_workers = multiprocessing.cpu_count() # set to lower number if running out of memory
   num_splits = round(num_files / (num_workers * files_per_record))
 
   num_shards = num_workers * num_splits

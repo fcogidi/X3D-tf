@@ -5,27 +5,29 @@ This repository contains a tensorflow implementation of [X3D: Expanding Architec
 X3D networks are derived by expanding multiple axes of a tiny 2D image classification network using a stepwise network expansion method.
 These networks are reported to achieve high accuracy on video recognition tasks, even in mobile computational regimes.
 
-**To install requirements**:
+## Installation
 
 ***Optional***: ```conda create --name x3d-tf tensorflow-gpu```
 
 ```setup
 pip install -r requirements.txt
 ```
-## Data Preprocessing
-### Option 1 (recommended): Write video files to TFRecord format
+## Usage
+### Data Preparation
+**Option 1 (recommended): Write video files to TFRecord format**
 ```create tfrecord
-PYTHONPATH=".:$PYTHONPATH" python datasets/create_tfrecords.py --video_dir=<path to training, validation or test dataset> --label_map=<path to label map .json file> --output_dir=<path to folder> --set=<train, val or test> --files_per_record=32
+PYTHONPATH=".:$PYTHONPATH" python datasets/create_tfrecords.py --set <train, val or test> --video_dir path_to_your_data_folder --label_map datasets/kinetics400/label_map.json --output_dir tfrecords/rec --files_per_record 32
 ```
-### Option 2: Generate a text file of video paths and label
-COMING SOON...
-
-## Training
+**Option 2: Generate a text file of video paths and label**
+```create label
+PYTHONPATH=".:$PYTHONPATH" python datasets/create_label.py --data_dir path_to_your_data_folder --path_to_label_map datasets/kinetics400/label_map.json --output_path datasets/kinetics400/train.txt
+```
+### Training
 
 To train the model(s) in the paper, run this command:
 
 ```train
-python train.py --train_file_pattern=<file pattern of tfrecords for training set> --val_file_pattern=<file pattern of tfrecords for validation set> --model_dir=<path to model directory> --config=<path to config file> --num_gpus=1
+python train.py --train_file_pattern tfrecords/rec-train* --val_file_pattern tfrecords/rec-val* --model_dir path_to_your_model_folder --config configs/kinetics/X3D_XS.yaml --num_gpus 1 --use_tfrecords
 ```
 
 To view all available options and their descriptions, run:
@@ -34,12 +36,12 @@ To view all available options and their descriptions, run:
 python train.py --help
 ```
 
-## Evaluation
+### Evaluation
 
 To evaluate a model, run:
 
 ```eval
-TODO
+python eval.py --model_folder path_to_your_model_folder --cfg configs/kinetics/X3D-XS/ --test_label_file datasets/kinetics400/test.json --gpus 1
 ```
 
 ## Results
@@ -48,22 +50,24 @@ This implementation achieves the following performance on the video classificati
 
 | Model name         | Top 1 Accuracy  | Top 5 Accuracy |  Test  |
 | ------------------ |---------------- | -------------- |  ----  |
-| X3D-XS             |    48.66        |     72.26      |  TODO  |
+| X3D-XS             |    TODO        |     TODO     |  TODO  |
 | X3D-S              |     TODO        |      TODO      |  TODO  |
 | X3D-M              |     TODO        |      TODO      |  TODO  |
 | X3D-L              |     TODO        |      TODO      |  TODO  |
 | X3D-XL             |     TODO        |      TODO      |  TODO  |
 
-Training and evaluation are [logged on weights & biases](https://wandb.ai/franklinogidi/X3D-tf)
+Training and evaluation are [logged on weights & biases](https://wandb.ai/franklinogidi/X3D-tf). Pretrained models can
+be found in the `models/` folder.
 
-## TODO
+## Roadmap
 
+- [x] Support both reading from TFRecord files and decoding raw video files
 - [ ] Train models on Kinetics-400 dataset
 - [ ] Train models on the Charades dataset
   - [ ] Add localization head to network
 - [ ] Add multigrid training
 
-Contributions are welcome.
+**Contributions are welcome.**
 
 ## Citation
 

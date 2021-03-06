@@ -1,4 +1,5 @@
 decord==0.5.2
+imageio==2.9.0
 imageio-ffmpeg==0.4.3
 tensorflow==2.4.1
 tqdm==4.57.0
