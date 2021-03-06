@@ -151,8 +151,8 @@ def main(_):
         epochs=cfg.TRAIN.EPOCHS,
         initial_epoch = current_epoch,
         steps_per_epoch=cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE,
-        validation_data=get_dataset(cfg, FLAGS.train_file_pattern, False,
-          FLAGS.mixed_precision) if FLAGS.train_file_pattern else None,
+        validation_data=get_dataset(cfg, FLAGS.val_file_pattern, False,
+          FLAGS.mixed_precision) if FLAGS.val_file_pattern else None,
         callbacks=utils.get_callbacks(
             cfg, lr_schedule, FLAGS))
 

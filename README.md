@@ -12,13 +12,20 @@ These networks are reported to achieve high accuracy on video recognition tasks,
 ```setup
 pip install -r requirements.txt
 ```
+## Data Preprocessing
+### Option 1 (recommended): Write video files to TFRecord format
+```create tfrecord
+PYTHONPATH=".:$PYTHONPATH" python datasets/create_tfrecords.py --video_dir=<path to training, validation or test dataset> --label_map=<path to label map .json file> --output_dir=<path to folder> --set=<train, val or test> --files_per_record=32
+```
+### Option 2: Generate a text file of video paths and label
+COMING SOON...
 
 ## Training
 
 To train the model(s) in the paper, run this command:
 
 ```train
-python train.py --train_label_file=<path_to_train_label_file> --val_label_file=<path_to_validation_label_file> --model_dir=<path_to_model_directory> --config=<path_to_config_file> --num_gpus=1
+python train.py --train_file_pattern=<file pattern of tfrecords for training set> --val_file_pattern=<file pattern of tfrecords for validation set> --model_dir=<path to model directory> --config=<path to config file> --num_gpus=1
 ```
 
 To view all available options and their descriptions, run:
@@ -34,10 +41,6 @@ To evaluate a model, run:
 ```eval
 TODO
 ```
-
-## Pre-trained Models
-
-Coming soon...
 
 ## Results
 

@@ -76,9 +76,9 @@ class InputReader:
     video = tf.map_fn(lambda i: tf.image.decode_jpeg(sequence['video'][i]),
             indices, fn_output_signature=tf.uint8)
     label = context['video/class/label']
-    
+
     return video, label
-  
+
   @tf.function
   def process_batch(self, videos, label,  batch_size):
     if self._is_training:
@@ -139,9 +139,9 @@ class InputReader:
         compression_type='GZIP',
         num_parallel_reads=tf.data.experimental.AUTOTUNE).prefetch(1),
       num_parallel_calls=tf.data.experimental.AUTOTUNE)
-      
+
     if self._is_training:
-      dataset = dataset.shuffle(batch_size, reshuffle_each_iteration=True).repeat()
+      dataset = dataset.shuffle(batch_size*16, reshuffle_each_iteration=True).repeat()
 
     dataset = dataset.with_options(self.dataset_options)
 
