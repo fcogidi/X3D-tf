@@ -47,7 +47,6 @@ def main(_):
   # init wandb
   if cfg.WANDB.ENABLE:
     wandb.tensorboard.patch(root_logdir=model_dir)
-    #run_id = wandb.util.generate_id()
     wandb.init(
         job_type='train',
         group=cfg.WANDB.GROUP_NAME,

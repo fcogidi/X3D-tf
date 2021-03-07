@@ -25,8 +25,7 @@ class InputReader:
     self._use_tfrecord = use_tfrecord
   
   def decode_video(self, line):
-    """
-    Given a line from a text file containing the link
+    """Given a line from a text file containing the link
     to a video and the numerical label, process the line
     and decode the video.
 
@@ -42,7 +41,7 @@ class InputReader:
     line = tf.strings.strip(line)
 
     # split the (byte) string by space
-    split = tf.strings.split(line, ' ')
+    split = tf.strings.split(line, " ")
 
     # convert byte tensor to python string object
     path = tf.compat.as_str_any(split[0].numpy())
@@ -52,45 +51,50 @@ class InputReader:
 
     try:
       # decode video frames
-      bridge.set_bridge('tensorflow')
+      bridge.set_bridge("tensorflow")
       vr = VideoReader(path, ctx=cpu(0))
       num_frames = len(vr)
       video = vr.get_batch(range(num_frames))
     except Exception as e:
       tf.compat.v1.logging.warn(
-        f'\nFailed to decode video {path}. Replacing with zeros...')
+        f"\nFailed to decode video {path}. Replacing with zeros...")
       video = tf.zeros([100, 240, 144, 3], tf.uint8)
 
     return video, label
 
   def parse_and_decode(self, serialized_example):
-    """[summary]
+    """parse and decode the contents of a serialized
+    tf.train.SequenceExample object.
 
     Args:
-        serialized_example ([type]): [description]
+      serialized_example (tf.train.Example): A
 
     Returns:
-        [type]: [description]
+      (tf.uint8, tf.int64): (video tensor, category id of video)
     """
     sequence_features = {
-        'video': tf.io.FixedLenSequenceFeature([], dtype=tf.string)}
+        "video": tf.io.FixedLenSequenceFeature([], dtype=tf.string)}
 
     context_features = {
-        'video/num_frames': tf.io.FixedLenFeature([], tf.int64, -1),
-        'video/class/label': tf.io.FixedLenFeature([], tf.int64, -1)}
+        "video/num_frames": tf.io.FixedLenFeature([], tf.int64, -1),
+        "video/class/label": tf.io.FixedLenFeature([], tf.int64, -1)}
 
     context, sequence = tf.io.parse_single_sequence_example(
         serialized_example, context_features, sequence_features)
 
-    indices = tf.range(0, context['video/num_frames'])
-    video = tf.map_fn(lambda i: tf.image.decode_jpeg(sequence['video'][i]),
+    indices = tf.range(0, context["video/num_frames"])
+    video = tf.map_fn(lambda i: tf.image.decode_jpeg(sequence["video"][i]),
             indices, fn_output_signature=tf.uint8)
-    label = context['video/class/label']
+    label = context["video/class/label"]
 
     return video, label
 
   @tf.function
   def process_batch(self, videos, label,  batch_size):
+    """Reshape the video tensor to be of the format
+    `batch_size x H x W x C`
+    
+    """
     if self._is_training:
       videos = tf.squeeze(videos)
       videos.set_shape((
@@ -122,6 +126,7 @@ class InputReader:
     options = tf.data.Options()
     options.experimental_optimization.map_vectorization.enabled = True
     options.experimental_optimization.map_parallelization = True
+    options.experimental_threading.max_intra_op_parallelism = 1
     options.experimental_deterministic = not self._is_training
     options.experimental_optimization.parallel_batch = True
     return options
@@ -146,7 +151,7 @@ class InputReader:
       dataset = tf.data.Dataset.list_files(file_pattern, shuffle=True)
       dataset = dataset.interleave(lambda filename: tf.data.TFRecordDataset(
         filename,
-        compression_type='GZIP',
+        compression_type="GZIP",
         num_parallel_reads=tf.data.experimental.AUTOTUNE).prefetch(1),
       deterministic=False,
       num_parallel_calls=tf.data.experimental.AUTOTUNE)
