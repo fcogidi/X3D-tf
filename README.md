@@ -74,7 +74,7 @@ be found in the `models/` folder.
 
 ## Citation
 
-If you find this work useful, consider citing the original paper as follows:
+If you find this work useful, consider citing the original paper:
 
 ```BibTeX
 @inproceedings{feichtenhofer2020x3d,
@@ -88,4 +88,4 @@ If you find this work useful, consider citing the original paper as follows:
 
 ## Acknowledgements
 
-I would like to thank Kumara Kahatapitiya for sharing the training and validation sets of the Kinetics-400 dataset.
+I would like to thank [Kumara Kahatapitiya](https://github.com/kkahatapitiya) for sharing the training and validation sets of the Kinetics-400 dataset.
