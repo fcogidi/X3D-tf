@@ -54,7 +54,7 @@ This implementation achieves the following performance on the video classificati
 
 | Model name         | Top 1 Accuracy  | Top 5 Accuracy |  Test  |
 | ------------------ |---------------- | -------------- |  ----  |
-| X3D-XS             |    TODO        |     TODO     |  TODO  |
+| X3D-XS             |    48.6       |     72.1    |  TODO  |
 | X3D-S              |     TODO        |      TODO      |  TODO  |
 
 Training and evaluation are [logged on weights & biases](https://wandb.ai/franklinogidi/X3D-tf). Pretrained models can
