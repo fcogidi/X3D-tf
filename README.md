@@ -64,9 +64,11 @@ be found in the `models/` folder.
 
 - [x] Support both reading from TFRecord files and decoding raw video files
 - [ ] Train models on Kinetics-400 dataset
-- [ ] Train models on the Charades dataset
-  - [ ] Add localization head to network
+  - [ ] X3D-XS
+  - [ ] X3D-S
 - [ ] Add multigrid training
+- [ ] Add localization head to network
+- [ ] Train models on the Charades dataset
 
 **Contributions are welcome.**
 
