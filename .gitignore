@@ -4,6 +4,6 @@ datasets/kinetics400/compress
 datasets/kinetics400/val_256
 datasets/kinetics400/train_256
 wandb
-tfrecord
+tfrecords
 experiments
 test.py

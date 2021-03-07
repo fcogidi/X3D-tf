@@ -47,7 +47,7 @@ def main(_):
   # init wandb
   if cfg.WANDB.ENABLE:
     wandb.tensorboard.patch(root_logdir=model_dir)
-    run_id = wandb.util.generate_id()
+    #run_id = wandb.util.generate_id()
     wandb.init(
         job_type='train',
         group=cfg.WANDB.GROUP_NAME,
@@ -55,8 +55,7 @@ def main(_):
         sync_tensorboard=cfg.WANDB.TENSORBOARD,
         mode=cfg.WANDB.MODE,
         config=dict(cfg),
-        resume='allow',
-        id=run_id
+        resume=True
     )
 
   if FLAGS.debug:
@@ -149,8 +148,9 @@ def main(_):
         verbose=1,
         epochs=cfg.TRAIN.EPOCHS,
         initial_epoch = current_epoch,
-        steps_per_epoch=cfg.TRAIN.DATASET_SIZE/cfg.TRAIN.BATCH_SIZE,
+        steps_per_epoch=cfg.TRAIN.DATASET_SIZE//cfg.TRAIN.BATCH_SIZE,
         validation_data=get_dataset(cfg, FLAGS.val_file_pattern, False) if FLAGS.val_file_pattern else None,
+        validation_steps=cfg.TEST.DATASET_SIZE//cfg.TEST.BATCH_SIZE,
         callbacks=utils.get_callbacks(cfg, lr_schedule, FLAGS))
 
 if __name__ == "__main__":

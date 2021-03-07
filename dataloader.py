@@ -151,13 +151,12 @@ class InputReader:
       deterministic=False,
       num_parallel_calls=tf.data.experimental.AUTOTUNE)
       if self._is_training:
-        dataset = dataset.shuffle(batch_size*16 if batch_size else 1024,
-          reshuffle_each_iteration=True).repeat()
+        dataset = dataset.shuffle(batch_size*16 if batch_size else 1024)
     else:
       dataset = tf.data.TextLineDataset(file_pattern).cache()
       if self._is_training:
         dataset = dataset.shuffle(self._cfg.TRAIN.DATASET_SIZE,
-          reshuffle_each_iteration=True).repeat()
+          reshuffle_each_iteration=True)
 
     dataset = dataset.with_options(self.dataset_options)
 
@@ -168,6 +167,9 @@ class InputReader:
       dataset = dataset.map(
           lambda x: tf.py_function(self.decode_video, [x], [tf.uint8, tf.int32]),
           num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+    if self._is_training:
+      dataset = dataset.repeat()
 
     dataset = dataset.map(lambda *args: temporal_transform(*args),
         num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -184,6 +186,10 @@ class InputReader:
       dataset = dataset.map(
           lambda *args: self.process_batch(*args, batch_size),
           num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+    if not self._is_training:
+      dataset = dataset.repeat()
+
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
     return dataset
