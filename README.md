@@ -56,9 +56,6 @@ This implementation achieves the following performance on the video classificati
 | ------------------ |---------------- | -------------- |  ----  |
 | X3D-XS             |    TODO        |     TODO     |  TODO  |
 | X3D-S              |     TODO        |      TODO      |  TODO  |
-| X3D-M              |     TODO        |      TODO      |  TODO  |
-| X3D-L              |     TODO        |      TODO      |  TODO  |
-| X3D-XL             |     TODO        |      TODO      |  TODO  |
 
 Training and evaluation are [logged on weights & biases](https://wandb.ai/franklinogidi/X3D-tf). Pretrained models can
 be found in the `models/` folder.
