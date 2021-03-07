@@ -1,4 +1,4 @@
-# X3D-tf
+# A TensorFlow Implementation of X3D
 
 This repository contains a tensorflow implementation of [X3D: Expanding Architectures for Efficient Video Recognition](https://arxiv.org/abs/2004.04730). This reproduction work was done as part of the [2020 ML Reproducibility Challenge](https://paperswithcode.com/rc2020).
 
