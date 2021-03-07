@@ -20,9 +20,12 @@ pip install -r requirements.txt
 #### Option 1 (recommended): Write video files to TFRecord format
 
 ```create tfrecord
-PYTHONPATH=".:$PYTHONPATH" python datasets/create_tfrecords.py --set=<train, val or test> --video_dir=path_to_your_data_folder --label_map=datasets/kinetics400/label_map.json --output_dir=tfrecords/rec --files_per_record=32
+PYTHONPATH=".:$PYTHONPATH" python datasets/create_tfrecords.py --set=<train, val or test> --video_dir=path_to_your_data_folder --label_map=datasets/kinetics400/label_map.json --output_dir=tfrecords/rec --videos_per_record=32
 ```
-
+To verify the contents of the tfrecord files, use the following command:
+```inspect tfrecord
+PYTHONPATH=".:$PYTHONPATH" python datasets/inspect_tfrecord.py --cfg_file=configs/kinetics/X3D_M.yaml --label_map_file=datasets/kinetics400/label_map.json --file_pattern=tfrecords/rec-val-* --eval --num_samples=32
+```
 #### Option 2: Generate a text file of video paths and label
 
 ```create label
@@ -37,18 +40,12 @@ To train the model(s) in the paper, run this command:
 python train.py --train_file_pattern=tfrecords/rec-train* --val_file_pattern=tfrecords/rec-val* --model_dir=path_to_your_model_folder --config=configs/kinetics/X3D_XS.yaml --num_gpus=1 --use_tfrecords
 ```
 
-To view all available options and their descriptions, run:
-
-```help
-python train.py --help
-```
-
 ### Evaluation
 
 To evaluate a model, run:
 
 ```eval
-python eval.py --model_folder=path_to_your_model_folder --cfg=configs/kinetics/X3D-XS/ --test_label_file=datasets/kinetics400/test.json --gpus=1
+python eval.py --model_folder=path_to_your_model_folder --cfg=configs/kinetics/X3D-XS/ --test_label_file=datasets/kinetics400/test.json --gpus=1 --tfrecord
 ```
 
 ## Results

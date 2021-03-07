@@ -1,5 +1,6 @@
 import os
 import glob
+import numpy as np
 import tensorflow as tf
 from yacs.config import CfgNode
 from decord import VideoReader, bridge, cpu
@@ -8,21 +9,22 @@ from transforms import TemporalTransforms, SpatialTransforms
 import utils
 
 class InputReader:
-  def __init__(self, cfg: CfgNode,
-              is_training: bool,
-              use_tfrecord: bool,
-              mixed_precision: bool = False):
+  def __init__(self, cfg: CfgNode, is_training, use_tfrecord,
+              mixed_precision=False):
     """__init__()
 
     Args:
       cfg (CfgNode): the model configurations
       is_training (bool): boolean flag to indicate if
         reading training dataset
+      use_tfrecord (bool): whether data is in tfrecord
+        format.
+      mixed_precision (bool): whether to use mixed precision.
     """
     self._cfg = cfg
-    self._mixed_prec = mixed_precision
     self._is_training = is_training
     self._use_tfrecord = use_tfrecord
+    self._mixed_prec = mixed_precision
   
   def decode_video(self, line):
     """Given a line from a text file containing the link
@@ -37,10 +39,7 @@ class InputReader:
       tf.uint8, tf.int32: the decoded video (with all its
         frames intact), the label of the video
     """
-    # remove trailing and leading whitespaces
     line = tf.strings.strip(line)
-
-    # split the (byte) string by space
     split = tf.strings.split(line, " ")
 
     # convert byte tensor to python string object
@@ -49,8 +48,9 @@ class InputReader:
     # convert label to integer
     label = tf.strings.to_number(split[1], out_type=tf.int32)
 
+    # decode video frames
+    # if unsuccessful, replace with a tensor of zeros.
     try:
-      # decode video frames
       bridge.set_bridge("tensorflow")
       vr = VideoReader(path, ctx=cpu(0))
       num_frames = len(vr)
@@ -62,6 +62,7 @@ class InputReader:
 
     return video, label
 
+  @tf.function
   def parse_and_decode(self, serialized_example):
     """parse and decode the contents of a serialized
     tf.train.SequenceExample object.
@@ -85,15 +86,14 @@ class InputReader:
     indices = tf.range(0, context["video/num_frames"])
     video = tf.map_fn(lambda i: tf.image.decode_jpeg(sequence["video"][i]),
             indices, fn_output_signature=tf.uint8)
-    label = context["video/class/label"]
+    label = tf.cast(context["video/class/label"], tf.int32)
 
     return video, label
 
   @tf.function
   def process_batch(self, videos, label,  batch_size):
-    """Reshape the video tensor to be of the format
+    """Reshapes the video tensor to be of the format
     `batch_size x H x W x C`
-    
     """
     if self._is_training:
       videos = tf.squeeze(videos)
@@ -156,7 +156,7 @@ class InputReader:
       deterministic=False,
       num_parallel_calls=tf.data.experimental.AUTOTUNE)
       if self._is_training:
-        dataset = dataset.shuffle(batch_size*16 if batch_size else 1024)
+        dataset = dataset.shuffle(batch_size * 16 if batch_size else 1024)
     else:
       dataset = tf.data.TextLineDataset(file_pattern).cache()
       if self._is_training:

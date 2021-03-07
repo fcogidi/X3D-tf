@@ -87,13 +87,8 @@ class TemporalTransforms:
     return clips, label
 
 class SpatialTransforms:
-  def __init__(self,
-              jitter_min: float,
-              jitter_max: float,
-              crop_size: int,
-              is_training: bool,
-              num_crops: int=1,
-              random_hflip: bool = False):
+  def __init__(self, jitter_min, jitter_max, crop_size, is_training,
+              num_crops=1, random_hflip=False):
     """__init__()
 
     Args:
@@ -105,7 +100,7 @@ class SpatialTransforms:
       num_crops (int, optional): number of crops to take. Only for
         non-training data. Defaults to 1.
       random_hflip (bool, optional): whether to perform horizontal flip
-        on frames (with probability of 0.5). Defaults to True.
+        on frames (with probability of 0.5). Defaults to False.
     """
     self._is_training = is_training
     self._num_crops = num_crops

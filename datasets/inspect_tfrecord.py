@@ -43,13 +43,13 @@ def main(_):
   loader = dataloader.InputReader(cfg, not FLAGS.eval, True)
   dataset = loader(FLAGS.file_pattern)
 
-  tik = time.time()
+  tik = time.perf_counter()
   dataset = list(dataset.take(FLAGS.num_samples).as_numpy_iterator())
-  print(f'Reading {FLAGS.num_samples} files took {time.time() - tik}s')
+  print(f'Reading {FLAGS.num_samples} files took {time.perf_counter() - tik}s')
 
   views = cfg.TEST.NUM_TEMPORAL_VIEWS * cfg.TEST.NUM_SPATIAL_CROPS
 
-  tik = time.time()
+  tik = time.perf_counter()
   for example in dataset:
     if FLAGS.eval:
       shapes = example[0].shape
@@ -66,7 +66,7 @@ def main(_):
       frames = utils.denormalize(frames, cfg.DATA.MEAN, cfg.DATA.STD)
       for frame in frames:
         writer.append_data(frame.numpy())
-  print(f'Writing {FLAGS.num_samples} files took {time.time() - tik}s')
+  print(f'Writing {FLAGS.num_samples} files took {time.perf_counter() - tik}s')
 
 if __name__ == "__main__":
   app.run(main)

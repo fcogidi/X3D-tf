@@ -108,21 +108,31 @@ def denormalize(clips, mean, std, norm_value=255, out_dtype=tf.uint8):
   return tf.reshape(all_frames, tf.shape(clips))
 
 def get_callbacks(cfg, lr_schedule, flags):
+  """creates a list of callback for training.
+
+  Args:
+    cfg (): the configurations
+    lr_schedule (func): a function for determining the
+      learning rate schedule.
+    flags (): command line flags.
+
+  """
   callbacks = []
-  lr = tf.keras.callbacks.LearningRateScheduler(lr_schedule, 1),
-  tb = tf.keras.callbacks.TensorBoard(
+  lr = tf.keras.callbacks.LearningRateScheduler(lr_schedule, 1)
+
+  tensorboard = tf.keras.callbacks.TensorBoard(
       log_dir=flags.model_dir,
-      profile_batch=32, #flags.debug
+      profile_batch=32 * flags.debug,
       write_graph=True,
-      update_freq=flags.save_checkpoints_step or 'epoch'
-  )
+      update_freq=flags.save_checkpoints_step or 'epoch')
+
   ckpt = tf.keras.callbacks.ModelCheckpoint(
       os.path.join(flags.model_dir, 'ckpt-{epoch:d}'),
       verbose=1,
       monitor='val_acc' if flags.val_file_pattern else 'loss',
-      save_freq=flags.save_checkpoints_step or 'epoch',
-  )
-  callbacks.extend([lr, tb, ckpt])
+      save_freq=flags.save_checkpoints_step or 'epoch')
+
+  callbacks.extend([lr, tensorboard, ckpt])
   if cfg.WANDB.ENABLE:
     wandb = WandbCallback(
       verbose=1,
@@ -133,18 +143,28 @@ def get_callbacks(cfg, lr_schedule, flags):
   return callbacks
 
 def get_strategy(num_gpus):
-  # training strategy setup
+  """sets up the training strategy - single or multi-gpu.
+
+  Args:
+    num_gpus (int): number of gpus to use for training
+
+  Returns:
+    (tf.distribute.Strategy): the strategy to use for the current
+      training session.
+
+  """
+  # prevent runtime initialization from allocating all the memory in each gpu
   avail_gpus = tf.config.list_physical_devices('GPU')
   for gpu in avail_gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
-  if num_gpus > 1 and len(avail_gpus) > 1:
+  if num_gpus > 1 and len(avail_gpus) > 1: # use multiple gpus
     devices = []
     for num in range(num_gpus):
       if num < len(avail_gpus):
         id = int(avail_gpus[num].name.split(':')[-1])
         devices.append(f'/gpu:{id}')
-    assert len(devices) > 1
+    assert len(devices) > 1 # confirm that more than 1 gpu is available to use
     strategy = tf.distribute.MirroredStrategy(devices)
   elif len(avail_gpus) == 1 and num_gpus == 1:
     strategy = tf.distribute.OneDeviceStrategy('device:GPU:0')
@@ -155,7 +175,17 @@ def get_strategy(num_gpus):
   return strategy
 
 def get_precision(mixed_precision):
-  # mixed precision
+  """set up the precision to be used for training.
+
+  Args:
+    mixed_precision (bool): whether to use use mixed
+      precision.
+  
+  Returns:
+    (str): 'mixed_float16' if `mixed_precision`, otherwise
+      `float32`
+
+  """
   precision = 'float32'
   if mixed_precision:
     if tf.config.list_physical_devices('GPU'):

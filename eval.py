@@ -16,7 +16,7 @@ flags.DEFINE_string('model_folder', None,
     'Path to directory where checkpoint(s) are stored.')
 flags.DEFINE_integer('gpus', 1,
     'Number of gpus to use for training.', lower_bound=0)
-flags.DEFINE_bool('tfrecord', True,
+flags.DEFINE_bool('tfrecord', False,
     'Whether data should be loaded from tfrecord files.')
 
 flags.mark_flags_as_required(['cfg', 'test_file_pattern', 'model_folder'])

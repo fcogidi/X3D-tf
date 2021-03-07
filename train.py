@@ -74,7 +74,7 @@ def main(_):
   tf.keras.mixed_precision.set_global_policy(policy)
 
   def get_dataset(cfg, file_pattern, is_training):
-    """Returns a tf.data dataset"""
+    """Returns a tf.data.Dataset"""
     return dataloader.InputReader(
         cfg,
         is_training,
@@ -128,7 +128,7 @@ def main(_):
     model = X3D(cfg)
     model = load_model(model, cfg)
 
-    # resume training from checkpoint, if available
+    # resume training from latest checkpoint, if available
     current_epoch = 0
     ckpt_path = tf.train.latest_checkpoint(model_dir)
     if ckpt_path:
