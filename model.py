@@ -65,7 +65,8 @@ class X3D(K.Model):
       out_dim = utils.round_width(block[1], cfg.NETWORK.WIDTH_FACTOR)
       inner_dim = int(out_dim * cfg.NETWORK.BOTTLENECK_WIDTH_FACTOR)
       block_depth = utils.round_repeats(block[0], cfg.NETWORK.DEPTH_FACTOR)
-
+      
+      tf.keras.backend.clear_session()
       stage = ResStage(
           in_channels=in_dim,
           inner_channels=inner_dim,
@@ -439,6 +440,7 @@ class ResStage(K.layers.Layer):
     # the input for subsequent layers is the output
     # from the preceeding layer
     for i in range(depth):
+      tf.keras.backend.clear_session()
       self.stage.add(
           ResBlock(
             bn_cfg=self._bn_cfg,
