@@ -1,4 +1,5 @@
 import os
+import gc
 import math
 import tensorflow as tf
 from absl import logging
@@ -107,6 +108,17 @@ def denormalize(clips, mean, std, norm_value=255, out_dtype=tf.uint8):
 
   return tf.reshape(all_frames, tf.shape(clips))
 
+class memoryManager(tf.keras.callbacks.Callback):
+  def on_epoch_end(self, epoch, logs=None):
+    """clear memory at the end of each epoch"""
+    tf.keras.backend.clear_session()
+    gc.collect()
+
+  def on_test_begin(self, logs=None):
+    """clear memory at the beginning of model evaluation"""
+    tf.keras.backend.clear_session()
+    gc.collect()
+
 def get_callbacks(cfg, lr_schedule, flags):
   """creates a list of callback for training.
 
@@ -123,7 +135,6 @@ def get_callbacks(cfg, lr_schedule, flags):
   tensorboard = tf.keras.callbacks.TensorBoard(
       log_dir=flags.model_dir,
       profile_batch=32 * flags.debug,
-      write_graph=True,
       update_freq=flags.save_checkpoints_step or 'epoch')
 
   ckpt = tf.keras.callbacks.ModelCheckpoint(
@@ -132,7 +143,7 @@ def get_callbacks(cfg, lr_schedule, flags):
       monitor='val_acc' if flags.val_file_pattern else 'loss',
       save_freq=flags.save_checkpoints_step or 'epoch')
 
-  callbacks.extend([lr, tensorboard, ckpt])
+  callbacks.extend([lr, tensorboard, ckpt, memoryManager()])
   if cfg.WANDB.ENABLE:
     wandb = WandbCallback(
       verbose=1,
