@@ -18,7 +18,7 @@ flags.DEFINE_string('val_file_pattern', None,
 flags.DEFINE_string('model_dir', None,
     'Path to directory where model info, like checkpoints are (to be) stored.')
 flags.DEFINE_string('pretrained_ckpt', None,
-    'Path to directory where pretraining checkpoints are stored.')
+    'Path to directory where pretrained model checkpoints are stored.')
 flags.DEFINE_integer('num_gpus', 1,
     'Number of gpus to use for training.', lower_bound=0)
 flags.DEFINE_integer('save_checkpoints_step', None,

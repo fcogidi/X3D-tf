@@ -35,7 +35,7 @@ TEST:
   BATCH_SIZE: 8
 WANDB:
   ENABLE: True
-  MODE: online
+  MODE: offline
   GROUP_NAME: X3D-XS
   TENSORBOARD: True
   PROJECT_NAME: X3D-tf

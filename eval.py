@@ -13,7 +13,7 @@ flags.DEFINE_string('cfg', None,
 flags.DEFINE_string('test_file_pattern', None,
     'Path to .txt file containing paths to video and integer label for test dataset.')
 flags.DEFINE_string('model_folder', None,
-    'Path to directory where checkpoint(s) are stored.')
+    'Path to directory where model checkpoint(s) are stored.')
 flags.DEFINE_integer('gpus', 1,
     'Number of gpus to use for training.', lower_bound=0)
 flags.DEFINE_bool('tfrecord', False,
@@ -88,6 +88,8 @@ def main(_):
         callbacks=[tf.keras.callbacks.TensorBoard(
           log_dir=model_dir,
           profile_batch=2)])
+    else:
+      logging.info('No checkpoint found!')
 
 if __name__ == "__main__":
   app.run(main)
