@@ -6,4 +6,3 @@ datasets/kinetics400/train_256
 wandb
 tfrecords
 experiments
-test.py

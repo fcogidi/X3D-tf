@@ -69,20 +69,20 @@ python eval.py --model_folder=path_to_your_model_folder --cfg=configs/kinetics/X
 
 ## Results
 
-This implementation achieves the following performance on the video classification task using the Kinetics-400 dataset:
+This implementation achieves the following performance on the video classification task using the Kinetics-400 dataset (Training was done on 4 Tesla V100 GPUs, validation was done using 10-center clip testing, while testing was done using 30-LeftCenterRight clip testing):
 
 | Model name         | Top 1 Accuracy  | Top 5 Accuracy |  Test  |
 | ------------------ |---------------- | -------------- |  ----  |
-| X3D-XS             |     TODO        |       TODO     |  TODO  |
+| X3D-XS             |     60.32       |      83.16     |  TODO  |
 | X3D-S              |     TODO        |      TODO      |  TODO  |
 
-Training and evaluation are [logged on weights & biases](https://wandb.ai/franklinogidi/X3D-tf).
+Training and evaluation are [logged on weights & biases](https://wandb.ai/franklinogidi/X3D-tf). Pretrained weights can be found in the `models/` folder.
 
 ## Roadmap
 
 - [x] Support both reading from TFRecord files and decoding raw video files
 - [ ] Train models on Kinetics-400 dataset
-  - [ ] X3D-XS
+  - [x] X3D-XS
   - [ ] X3D-S
 - [ ] Add multigrid training
 - [ ] Add localization head to network
