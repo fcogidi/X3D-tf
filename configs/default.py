@@ -107,9 +107,6 @@ _C.TRAIN.WARMUP_LR = 0.01
 #
 _C.TEST = CN()
 
-# number of examples in the test set
-_C.TEST.DATASET_SIZE = 0
-
 # number of spatial crops
 _C.TEST.NUM_SPATIAL_CROPS = 3
 

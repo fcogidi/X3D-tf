@@ -34,7 +34,8 @@ The options should work on a custom dataset with a similar file structure.
 
 #### Option 1 (recommended): Write video files to TFRecord format
 
-This option decodes the video frames and encodes each of them as JPEGs before serializing and writing the frames to TFRecord files. Using TFRecord files provides prefetching benefits and improves I/O parallelization, which are especially useful when dealing with video dataset. In other words, using this option, as opposed to the option 2, will speed up training time. The major downside to using this option is that it requires more disk space to store the TFRecord files. In the case of the kinetics-400 dataset, the TFRecord files took 1.3 TB of disk space for the training (~235k videos) and validation (~19.8k videos) sets. This is about a 10x increase in the original dataset size. (Note that only frames making up the first 10 seconds of a video are stored in the TFRecord format).
+This option decodes the video frames and encodes each of them as JPEGs before serializing and writing the frames to TFRecord files. Using TFRecord files provides prefetching benefits and improves I/O parallelization, which are especially useful when dealing with video dataset. 
+In other words, using this option, as opposed to the option 2, will speed up training time. The major downside to using this option is that it requires more disk space to store the TFRecord files. In the case of the kinetics-400 dataset, the TFRecord files took 1.3 TB of disk space for the training (~235k videos) and validation (~19.8k videos) sets. This is about a 10x increase in the original dataset size. (Note that only frames making up the first 10 seconds of a video are stored in the TFRecord format).
 
 Use the following command to create TFRecord files:
 ```create tfrecord
@@ -56,7 +57,7 @@ PYTHONPATH=".:$PYTHONPATH" python datasets/create_label.py --data_dir=path_to_yo
 To train the model(s) in the paper, run this command:
 
 ```train
-python train.py --train_file_pattern=tfrecords/rec-train* --val_file_pattern=tfrecords/rec-val* --use_tfrecords --pretrained_ckpt=experiments/X3D-XS/ --model_dir=path_to_your_model_folder --config=configs/kinetics/X3D_XS.yaml --num_gpus=1 
+python train.py --train_file_pattern=tfrecords/rec-train* --val_file_pattern=tfrecords/rec-val* --use_tfrecords --pretrained_ckpt=models/X3D-XS/ --model_dir=path_to_your_model_folder --config=configs/kinetics/X3D_XS.yaml --num_gpus=1 
 ```
 
 ### Evaluation
@@ -64,17 +65,46 @@ python train.py --train_file_pattern=tfrecords/rec-train* --val_file_pattern=tfr
 To evaluate a model, run:
 
 ```eval
-python eval.py --model_folder=path_to_your_model_folder --cfg=configs/kinetics/X3D-XS/ --test_label_file=datasets/kinetics400/test.json --gpus=1 --tfrecord
+python eval.py --test_file_pattern=tfrecords/rec-test*  --model_folder=models/X3D-XS --cfg=configs/kinetics/X3D-XS.yaml --gpus=1 --tfrecord
 ```
 
 ## Results
 
-This implementation achieves the following performance on the video classification task using the Kinetics-400 dataset (Training was done on 4 Tesla V100 GPUs, validation was done using 10-center clip testing, while testing was done using 30-LeftCenterRight clip testing):
+The table below shows the performance of various models from this implementation on the video classification task using the Kinetics-400 dataset. 
+Training was done on 4 Tesla V100 GPUs. 10-center clip testing was used on both the validation and test set (~33.7k videos).
 
-| Model name         | Top 1 Accuracy  | Top 5 Accuracy |  Test  |
-| ------------------ |---------------- | -------------- |  ----  |
-| X3D-XS             |     60.32       |      83.16     |  TODO  |
-| X3D-S              |     TODO        |      TODO      |  TODO  |
+<table>
+    <thead>
+        <tr>
+            <th></th>
+            <th colspan=2>K400-val</th>
+            <th colspan=2>K400-test</th>
+        </tr>
+        <tr>
+            <th>Model</th>
+            <th>Top-1</th>
+            <th>Top-5</th>
+            <th>Top-1</th>
+            <th>Top-5</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>X3D-XS</td>
+            <td>60.3</td>
+            <td>83.2</td>
+            <td>60.2</td>
+            <td>83.1</td>
+        </tr>
+        <tr>
+            <td>X3D-S</td>
+            <td>TODO</td>
+            <td>TODO</td>
+            <td>TODO</td>
+            <td>TODO</td>
+        </tr>
+    </tbody>
+</table>
 
 Training and evaluation are [logged on weights & biases](https://wandb.ai/franklinogidi/X3D-tf). Pretrained weights can be found in the `models/` folder.
 

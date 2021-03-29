@@ -192,9 +192,6 @@ class InputReader:
           lambda *args: self.process_batch(*args, batch_size),
           num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
-    if not self._is_training:
-      dataset = dataset.repeat()
-
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
     return dataset

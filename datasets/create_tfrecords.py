@@ -17,7 +17,6 @@ import os
 import json
 import glob
 import math
-import decord
 import imageio
 import numpy as np
 from tqdm import tqdm
@@ -124,11 +123,6 @@ def write_tfrecord(paths, label_map, annotations, process_id, num_shards):
       # `videos_per_record` videos will fit into a single
       # tfrecord file.
       try:
-        '''decord.bridge.set_bridge('tensorflow')
-        vr = decord.VideoReader(path, ctx=decord.cpu(0))
-        fps = math.ceil(vr.get_avg_fps())
-        num_frames = min(len(vr), fps*10) # get at most 10 seconds of video
-        frames = vr.get_batch(range(num_frames))'''
         vr = imageio.get_reader(path, 'ffmpeg') # read the video
 
         # get all the frames

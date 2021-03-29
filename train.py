@@ -149,7 +149,6 @@ def main(_):
         initial_epoch = current_epoch,
         steps_per_epoch=cfg.TRAIN.DATASET_SIZE//cfg.TRAIN.BATCH_SIZE,
         validation_data=get_dataset(cfg, FLAGS.val_file_pattern, False) if FLAGS.val_file_pattern else None,
-        validation_steps=cfg.TEST.DATASET_SIZE//cfg.TEST.BATCH_SIZE,
         callbacks=utils.get_callbacks(cfg, lr_schedule, FLAGS))
 
 if __name__ == "__main__":

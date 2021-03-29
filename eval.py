@@ -77,8 +77,7 @@ def main(_):
     
     ckpt_path = tf.train.latest_checkpoint(model_dir)
     if ckpt_path:
-      current_epoch = int(os.path.basename(ckpt_path).split('-')[1])
-      logging.info(f'Found checkpoint {ckpt_path} at epoch {current_epoch}')
+      logging.info(f'Found checkpoint {ckpt_path}')
       model.load_weights(ckpt_path).expect_partial()
 
       model.evaluate(
