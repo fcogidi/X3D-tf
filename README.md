@@ -98,10 +98,10 @@ Training was done on 4 Tesla V100 GPUs. 10-center clip testing was used on both 
         </tr>
         <tr>
             <td>X3D-S</td>
-            <td>TODO</td>
-            <td>TODO</td>
-            <td>TODO</td>
-            <td>TODO</td>
+            <td>66.83</td>
+            <td>87.65</td>
+            <td>65.66</td>
+            <td>87.11</td>
         </tr>
     </tbody>
 </table>
@@ -113,7 +113,8 @@ Training and evaluation are [logged on weights & biases](https://wandb.ai/frankl
 - [x] Support both reading from TFRecord files and decoding raw video files
 - [ ] Train models on Kinetics-400 dataset
   - [x] X3D-XS
-  - [ ] X3D-S
+  - [x] X3D-S
+  - [ ] X3D-M
 - [ ] Add multigrid training
 - [ ] Add localization head to network
 - [ ] Train models on the Charades dataset
