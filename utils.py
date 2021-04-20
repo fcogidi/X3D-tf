@@ -133,7 +133,10 @@ def get_callbacks(cfg, lr_schedule, flags):
 
   callbacks.extend([lr, tensorboard, ckpt])
   if cfg.WANDB.ENABLE:
-    wandb = WandbCallback(verbose=1)
+    wandb = WandbCallback(
+      verbose=1,
+      save_weights_only=True
+    )
     callbacks.append(wandb)
   
   return callbacks
